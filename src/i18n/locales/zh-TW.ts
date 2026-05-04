@@ -39,6 +39,8 @@ export default {
   "setting.remote.client_name": "客戶端名稱",
   "setting.remote.client_name_desc": "為當前客戶端設定一個自訂名稱，用於多端同步時識別裝置。",
   "setting.remote.client_name_placeholder": "輸入客戶端名稱",
+  "setting.remote.auto_redirect": "遠端服務地址自動重新導向",
+  "setting.remote.auto_redirect_desc": "開啟後，將透過偵測服務地址的 301/302 重新導向來自動取得正確的服務地址。預設關閉。",
   "setting.remote.mobile_status_dot_pos": "手機端服務連通狀態顯示",
   "setting.remote.mobile_status_dot_pos_desc": "設定手機端服務連通狀態的形態和位置。",
   "setting.remote.mobile_status_dot_pos_hidden": "關閉顯示",

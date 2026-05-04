@@ -63,10 +63,27 @@ export class HttpApiService {
         if (!urlToProbe) return false;
 
         const base = urlToProbe.replace(/\/+$/, "");
+
+        // 如果未开启自动重定向检测，使用标准请求检查健康状态
+        if (!this.plugin.settings.autoRedirectEnabled) {
+            try {
+                const { status } = await this.request("/api/health", { method: "GET" });
+                // 2xx 表示健康，404 表示旧版服务端（也允许连接）
+                const isOk = (status >= 200 && status < 300) || status === 404;
+                if (isOk) {
+                    this.plugin.updateRuntimeApi(base);
+                }
+                return isOk;
+            } catch (e) {
+                this.plugin.updateRuntimeApi(base);
+                return false;
+            }
+        }
+
         const probeUrl = addRandomParam(base + "/api/health");
 
         try {
-            // 默认优先用 fetch 探测以获取 301/302 后的最终路径
+            // 开启了自动重定向检测：使用 fetch 探测以获取 301/302 后的最终路径
             const res = await fetch(probeUrl, {
                 method: 'GET',
                 redirect: 'follow',
@@ -89,10 +106,10 @@ export class HttpApiService {
             // 进一步校验业务状态码 (若返回的是 JSON)
             try {
                 const json = await res.clone().json();
-                return res.ok && this.isSuccess(json);
+                return (res.ok || res.status === 404) && (res.status === 404 || this.isSuccess(json));
             } catch (e) {
                 // 如果不是 JSON，回退到 HTTP 状态码判断
-                return res.ok;
+                return res.ok || res.status === 404;
             }
         } catch (e) {
             // 即使失败，也确保 runApi 有值（回退到探测的 base）
@@ -141,18 +158,9 @@ export class HttpApiService {
      * 用于升级后的轮询
      */
     async checkHealth(): Promise<boolean> {
-        const base = (this.plugin.runApi || this.plugin.settings.api).replace(/\/+$/, "");
-        const url = addRandomParam(base + "/api/health");
         try {
-            const res = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    "x-client": "ObsidianPlugin",
-                    "x-client-name": encodeURIComponent(this.plugin.getClientName()),
-                    "x-client-version": this.plugin.manifest.version || ""
-                }
-            });
-            return res.ok;
+            const { status } = await this.request("/api/health", { method: "GET" });
+            return (status >= 200 && status < 300) || status === 404;
         } catch (e) {
             return false;
         }
@@ -217,7 +225,7 @@ export class HttpApiService {
                 return {
                     status: response.status,
                     json: response.json,
-                    finalUrl: url
+                    finalUrl: (response as any).url || url
                 };
             } catch (e) {
                 throw e;

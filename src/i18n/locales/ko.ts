@@ -39,6 +39,8 @@ export default {
   "setting.remote.client_name": "클라이언트 이름",
   "setting.remote.client_name_desc": "멀티플랫폼 동기화 시 장치를 식별하기 위해 현재 클라이언트에 사용자 지정 이름을 설정합니다.",
   "setting.remote.client_name_placeholder": "클라이언트 이름을 입력하세요",
+  "setting.remote.auto_redirect": "원격 서비스 주소 자동 리디렉션",
+  "setting.remote.auto_redirect_desc": "활성화하면 서비스 주소의 301/302 리디렉션을 통해 올바른 서비스 주소를 자동으로 가져옵니다. 기본값은 비활성화입니다.",
   "setting.remote.mobile_status_dot_pos": "모바일 서비스 연결 상태 표시",
   "setting.remote.mobile_status_dot_pos_desc": "모바일 서비스 연결 상태의 표시 형태와 위치를 설정합니다.",
   "setting.remote.mobile_status_dot_pos_hidden": "표시 안 함",

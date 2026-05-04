@@ -39,6 +39,8 @@ export default {
   "setting.remote.client_name": "クライアント名",
   "setting.remote.client_name_desc": "マルチ端末同期時にデバイスを識別するために、現在のクライアントにカスタム名を設定します。",
   "setting.remote.client_name_placeholder": "クライアント名を入力してください",
+  "setting.remote.auto_redirect": "リモートサービスアドレスの自動リダイレクト",
+  "setting.remote.auto_redirect_desc": "有効にすると、サービスアドレスの 301/302 リダイレクトを検出し、正しいサービスアドレスを自動的に取得します。デフォルトでは無効です。",
   "setting.remote.mobile_status_dot_pos": "モバイル端末のサービス接続状態表示",
   "setting.remote.mobile_status_dot_pos_desc": "モバイル端末のサービス接続状態の表示形式と位置を設定します。",
   "setting.remote.mobile_status_dot_pos_hidden": "表示をオフ",

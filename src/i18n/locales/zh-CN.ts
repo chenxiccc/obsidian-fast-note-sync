@@ -39,6 +39,8 @@ export default {
   "setting.remote.client_name": "客户端名称",
   "setting.remote.client_name_desc": "为当前客户端设置一个自定义名称，用于多端同步时识别设备。",
   "setting.remote.client_name_placeholder": "输入客户端名称",
+  "setting.remote.auto_redirect": "远端服务地址自动重定向",
+  "setting.remote.auto_redirect_desc": "开启后，将通过探测服务地址的 301/302 重定向来自动获取正确的服务地址。默认关闭。",
   "setting.remote.mobile_status_dot_pos": "手机端服务连通状态显示",
   "setting.remote.mobile_status_dot_pos_desc": "设置手机端服务连通状态的形态和位置。",
   "setting.remote.mobile_status_dot_pos_hidden": "关闭显示",

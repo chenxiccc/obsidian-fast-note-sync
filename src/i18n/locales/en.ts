@@ -39,6 +39,8 @@ export default {
   "setting.remote.client_name": "Client Name",
   "setting.remote.client_name_desc": "Set a custom name for the current client to identify the device during multi-device sync.",
   "setting.remote.client_name_placeholder": "Enter client name",
+  "setting.remote.auto_redirect": "Automatic Redirect for Remote Service Address",
+  "setting.remote.auto_redirect_desc": "When enabled, automatically retrieves the correct service address by following 301/302 redirects. Disabled by default.",
   "setting.remote.mobile_status_dot_pos": "Mobile service connectivity status display",
   "setting.remote.mobile_status_dot_pos_desc": "Set the appearance and position of the mobile service connectivity status.",
   "setting.remote.mobile_status_dot_pos_hidden": "Hidden",

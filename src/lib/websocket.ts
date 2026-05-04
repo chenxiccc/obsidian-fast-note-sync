@@ -127,6 +127,9 @@ export class WebSocketClient {
     const isHealthy = await this.plugin.api.probeApiRedirect(this.plugin.runApi);
     if (!isHealthy) {
         dump("Health check failed before ws connect, scheduling reconnect...");
+        if (this.plugin.settings.autoRedirectEnabled) {
+            dump("Tip: If you are on mobile or using a proxy, try disabling 'Auto Detect API Redirect' in settings.");
+        }
         this.isOpen = false;
         this.notifyStatusChange(false);
         this.checkReConnect();

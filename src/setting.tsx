@@ -82,6 +82,8 @@ export interface PluginSettings {
   maxConcurrentUploads: number
   /** 是否在状态栏显示并发控制图标 */
   showConcurrencyIndicator: boolean
+  /** 是否自动检测 API 跳转 (301/302) */
+  autoRedirectEnabled: boolean
 }
 
 /**
@@ -130,6 +132,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   concurrencyControlEnabled: false,
   maxConcurrentUploads: 20,
   showConcurrencyIndicator: true,
+  autoRedirectEnabled: false,
 }
 
 export type TabId = "GENERAL" | "DISPLAY" | "SHORTCUT" | "REMOTE" | "SYNC" | "CLOUD" | "DEBUG"
@@ -886,6 +889,14 @@ export class SettingTab extends PluginSettingTab {
         }),
     )
     this.setDescWithBreaks(set.lastElementChild as HTMLElement, $("setting.remote.vault_name"))
+
+    new Setting(set).setName($("setting.remote.auto_redirect")).addToggle((toggle) =>
+      toggle.setValue(this.plugin.settings.autoRedirectEnabled).onChange(async (value) => {
+        this.plugin.settings.autoRedirectEnabled = value
+        await this.plugin.saveSettings()
+      }),
+    )
+    this.setDescWithBreaks(set.lastElementChild as HTMLElement, $("setting.remote.auto_redirect_desc"))
 
     new Setting(set).setName($("setting.remote.client_name")).addText((text) =>
       text
