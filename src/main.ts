@@ -19,6 +19,7 @@ import { LockManager } from "./lib/lock_manager";
 import { ConcurrencyManager } from "./lib/concurrency_manager";
 import { handleSync } from "./lib/operator";
 import { HttpApiService } from "./lib/api";
+import { clearAllTempChunks } from "./lib/file_operator";
 import { $ } from "./i18n/lang";
 
 
@@ -315,6 +316,9 @@ export default class FastSync extends Plugin {
       // 防止重复初始化 (Prevent duplicate initialization)
       if (this.menuManagerInitialized) return;
       this.menuManagerInitialized = true
+
+      // 0. 清理残留的临时下载目录 (Cleanup residual temp download dirs)
+      clearAllTempChunks(this)
 
       // 1. 初始化统计和日志 (UI)
       SyncLogManager.getInstance().init(this)

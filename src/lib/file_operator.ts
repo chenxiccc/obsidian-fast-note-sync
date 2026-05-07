@@ -1,7 +1,7 @@
 import { TFile, TAbstractFile, Notice, normalizePath, Platform } from "obsidian";
 
 import { ReceiveMessage, ReceiveFileSyncUpdateMessage, FileUploadMessage, FileSyncChunkDownloadMessage, FileDownloadSession, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
-import { hashContent, hashArrayBuffer, dump, sleep, dumpTable, isPathExcluded, getSafeCtime } from "./helps";
+import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, dumpTable, isPathExcluded, getSafeCtime } from "./helps";
 import { FileCloudPreview } from "./file_cloud_preview";
 import { SyncLogManager } from "./sync_log_manager";
 import { HttpApiService } from "./api";
@@ -15,6 +15,35 @@ const MAX_DOWNLOAD_BUFFER_BYTES = 20 * 1024 * 1024
 
 // 上传中的文件追踪，用于删除时取消上传
 const activeUploadsMap = new Map<string, { cancelled: boolean }>()
+
+/**
+ * 获取临时分片目录路径
+ */
+export const getTempChunksDir = (plugin: FastSync, sessionId?: string) => {
+  const base = normalizePath(`${getPluginDir(plugin)}/temp-chunks`)
+  return sessionId ? normalizePath(`${base}/${sessionId}`) : base
+}
+
+/**
+ * 清理指定会话的临时目录
+ */
+export const clearTempChunksDir = async (plugin: FastSync, sessionId: string) => {
+  const path = getTempChunksDir(plugin, sessionId)
+  if (await plugin.app.vault.adapter.exists(path)) {
+    await plugin.app.vault.adapter.rmdir(path, true)
+  }
+}
+
+/**
+ * 清理所有残留的临时目录
+ */
+export const clearAllTempChunks = async (plugin: FastSync) => {
+  const path = getTempChunksDir(plugin)
+  if (await plugin.app.vault.adapter.exists(path)) {
+    dump(`Cleaning all temp chunks: ${path}`)
+    await plugin.app.vault.adapter.rmdir(path, true)
+  }
+}
 
 /**
  * 清理上传队列
@@ -308,10 +337,10 @@ export const receiveFileUpload = async function (data: FileUploadMessage, plugin
         if (cpRaw) {
           const cp = JSON.parse(cpRaw)
           if (cp.sessionId === data.sessionId &&
-              cp.contentHash === contentHash &&
-              typeof cp.lastChunkIndex === 'number' &&
-              cp.lastChunkIndex >= 0 &&
-              cp.lastChunkIndex < actualTotalChunks - 1) {
+            cp.contentHash === contentHash &&
+            typeof cp.lastChunkIndex === 'number' &&
+            cp.lastChunkIndex >= 0 &&
+            cp.lastChunkIndex < actualTotalChunks - 1) {
             startChunkIndex = cp.lastChunkIndex + 1
             dump(`Resume upload from chunk ${startChunkIndex}/${actualTotalChunks}: ${data.path}`)
           }
@@ -515,26 +544,27 @@ export const receiveFileSyncUpdate = async function (data: ReceiveFileSyncUpdate
     }
 
     dump(`Receive file sync update(download): `, data.path)
-  const tempKey = `temp_${data.path}`
-  const tempSession = {
-    path: data.path,
-    ctime: data.ctime,
-    mtime: data.mtime,
-    lastTime: data.lastTime,
-    sessionId: "",
-    totalChunks: 0,
-    size: data.size,
-    chunks: new Map<number, ArrayBuffer>(),
-  }
-  plugin.fileDownloadSessions.set(tempKey, tempSession)
+    const tempKey = `temp_${data.path}`
+    const tempSession = {
+      path: data.path,
+      ctime: data.ctime,
+      mtime: data.mtime,
+      lastTime: data.lastTime,
+      sessionId: "",
+      totalChunks: 0,
+      size: data.size,
+      downloadedChunks: new Set<number>(),
+      tempDir: getTempChunksDir(plugin, `init_${data.pathHash}`),
+    }
+    plugin.fileDownloadSessions.set(tempKey, tempSession)
 
-  const requestData = {
-    vault: plugin.settings.vault,
-    path: data.path,
-    pathHash: data.pathHash,
-  }
-  plugin.websocket.SendMessage("FileChunkDownload", requestData)
-  plugin.totalFilesToDownload++
+    const requestData = {
+      vault: plugin.settings.vault,
+      path: data.path,
+      pathHash: data.pathHash,
+    }
+    plugin.websocket.SendMessage("FileChunkDownload", requestData)
+    plugin.totalFilesToDownload++
 
     // 更新同步时间
     // Update sync time
@@ -688,7 +718,8 @@ export const receiveFileSyncChunkDownload = async function (data: FileSyncChunkD
       sessionId: data.sessionId,
       totalChunks: data.totalChunks,
       size: data.size,
-      chunks: new Map<number, ArrayBuffer>(),
+      downloadedChunks: new Set<number>(),
+      tempDir: getTempChunksDir(plugin, data.sessionId),
     }
     plugin.fileDownloadSessions.set(data.sessionId, session)
     plugin.fileDownloadSessions.delete(tempKey)
@@ -701,9 +732,18 @@ export const receiveFileSyncChunkDownload = async function (data: FileSyncChunkD
       sessionId: data.sessionId,
       totalChunks: data.totalChunks,
       size: data.size,
-      chunks: new Map<number, ArrayBuffer>(),
+      downloadedChunks: new Set<number>(),
+      tempDir: getTempChunksDir(plugin, data.sessionId),
     }
     plugin.fileDownloadSessions.set(data.sessionId, session)
+  }
+
+  // 确保临时目录存在
+  if (data.totalChunks > 0) {
+    const tempPath = getTempChunksDir(plugin, data.sessionId)
+    if (!(await plugin.app.vault.adapter.exists(tempPath))) {
+      await plugin.app.vault.adapter.mkdir(tempPath)
+    }
   }
 
   // 仅在非同步期间(实时监听时)手动增加分片计数。同步期间由 SyncEnd 包装器统一预估
@@ -812,22 +852,33 @@ export const handleFileChunkDownload = async function (buf: ArrayBuffer | Blob, 
   const session = plugin.fileDownloadSessions.get(sessionId)
   if (!session) return
 
-  session.chunks.set(chunkIndex, chunkData)
+  // 写入磁盘
+  if (session.tempDir) {
+    const chunkPath = normalizePath(`${session.tempDir}/${chunkIndex}.bin`)
+    await plugin.app.vault.adapter.writeBinary(chunkPath, chunkData)
+    session.downloadedChunks?.add(chunkIndex)
+  } else {
+    // 降级使用内存 (Fallback to memory)
+    if (!session.chunks) session.chunks = new Map<number, ArrayBuffer>()
+    session.chunks.set(chunkIndex, chunkData)
+  }
+
   currentDownloadBufferBytes += chunkData.byteLength // 增加内存缓冲区计数
   plugin.downloadedChunksCount++
 
   // 更新日志进度
+  const completedCount = session.tempDir ? session.downloadedChunks?.size || 0 : session.chunks?.size || 0
   SyncLogManager.getInstance().addOrUpdateLog({
     id: sessionId,
     type: 'receive',
     action: 'FileDownload',
     path: session.path,
-    status: session.chunks.size === session.totalChunks ? 'success' : 'pending',
-    progress: session.totalChunks === 0 ? 100 : Math.floor((session.chunks.size / session.totalChunks) * 100)
+    status: completedCount === session.totalChunks ? 'success' : 'pending',
+    progress: session.totalChunks === 0 ? 100 : Math.floor((completedCount / session.totalChunks) * 100)
   });
 
 
-  if (session.chunks.size === session.totalChunks) {
+  if (completedCount === session.totalChunks) {
     await handleFileChunkDownloadComplete(session, plugin)
   }
 }
@@ -929,9 +980,19 @@ const handleFileChunkDownloadComplete = async function (session: FileDownloadSes
   try {
     const chunks: ArrayBuffer[] = []
     for (let i = 0; i < session.totalChunks; i++) {
-      const chunk = session.chunks.get(i)
+      let chunk: ArrayBuffer | undefined;
+      if (session.tempDir) {
+        const chunkPath = normalizePath(`${session.tempDir}/${i}.bin`)
+        if (await plugin.app.vault.adapter.exists(chunkPath)) {
+          chunk = await plugin.app.vault.adapter.readBinary(chunkPath)
+        }
+      } else {
+        chunk = session.chunks?.get(i)
+      }
+
       if (!chunk) {
         plugin.fileDownloadSessions.delete(session.sessionId)
+        if (session.tempDir) await clearTempChunksDir(plugin, session.sessionId)
         return
       }
       chunks.push(chunk)
@@ -992,16 +1053,22 @@ const handleFileChunkDownloadComplete = async function (session: FileDownloadSes
     }, { maxRetries: 5, retryInterval: 100 });
 
     // 释放内存计数
-    const sessionSize = Array.from(session.chunks.values()).reduce((sum, c) => sum + c.byteLength, 0)
+    const sessionSize = session.tempDir
+      ? session.size // 如果是磁盘模式，使用会话记录的总大小
+      : Array.from(session.chunks?.values() || []).reduce((sum, c) => sum + c.byteLength, 0)
     currentDownloadBufferBytes -= sessionSize
 
     plugin.fileDownloadSessions.delete(session.sessionId)
+    if (session.tempDir) await clearTempChunksDir(plugin, session.sessionId)
     plugin.downloadedFilesCount++
   } catch (e) {
     dump(`Error completing file download for ${session.path}`, e)
-    const sessionSize = Array.from(session.chunks.values()).reduce((sum, c) => sum + c.byteLength, 0)
+    const sessionSize = session.tempDir
+      ? session.size
+      : Array.from(session.chunks?.values() || []).reduce((sum, c) => sum + c.byteLength, 0)
     currentDownloadBufferBytes -= sessionSize
     plugin.fileDownloadSessions.delete(session.sessionId)
+    if (session.tempDir) await clearTempChunksDir(plugin, session.sessionId)
   } finally {
     plugin.concurrencyManager.releaseSlot(slotKey)
   }

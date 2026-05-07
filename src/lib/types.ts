@@ -76,7 +76,9 @@ export interface FileDownloadSession {
     sessionId: string;
     totalChunks: number;
     size: number;
-    chunks: Map<number, ArrayBuffer>;
+    chunks?: Map<number, ArrayBuffer>;
+    tempDir?: string;
+    downloadedChunks?: Set<number>;
 }
 
 export interface ReceiveMtimeMessage {
