@@ -16,7 +16,7 @@ export const startupSync = (plugin: FastSync): void => {
   void handleSync(plugin, plugin.localStorageManager.getMetadata("isInitSync"));
 };
 export const startupFullSync = async (plugin: FastSync) => {
-  void handleSync(plugin);
+  void handleSync(plugin, false);
 };
 
 export const resetSettingSyncTime = async (plugin: FastSync) => {
