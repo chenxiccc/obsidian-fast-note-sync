@@ -1,11 +1,11 @@
-import { TFolder, TFile, Notice, normalizePath, Platform } from "obsidian";
+import { TFolder, TFile, normalizePath } from "obsidian";
 
 import { receiveFileUpload, receiveFileSyncUpdate, receiveFileSyncDelete, receiveFileSyncMtime, receiveFileSyncChunkDownload, receiveFileSyncEnd, checkAndUploadAttachments, receiveFileSyncRename, receiveFileRenameAck, receiveFileUploadAck, receiveFileDeleteAck } from "./file_operator";
 import { receiveConfigSyncModify, receiveConfigUpload, receiveConfigSyncMtime, receiveConfigSyncDelete, receiveConfigSyncEnd, configAllPaths, receiveConfigSyncClear, receiveConfigModifyAck, receiveConfigDeleteAck } from "./config_operator";
 import { receiveNoteSyncModify, receiveNoteUpload, receiveNoteSyncMtime, receiveNoteSyncDelete, receiveNoteSyncEnd, receiveNoteSyncRename, receiveNoteModifyAck, receiveNoteRenameAck, receiveNoteDeleteAck } from "./note_operator";
 import { SyncMode, SnapFile, SnapFolder, SyncEndData, PathHashFile, NoteSyncData, FileSyncData, ConfigSyncData, FolderSyncData } from "./types";
 import { receiveFolderSyncModify, receiveFolderSyncDelete, receiveFolderSyncRename, receiveFolderSyncEnd } from "./folder_operator";
-import { hashContent, hashContentAsync, hashArrayBuffer, dump, isPathExcluded, configIsPathExcluded, getConfigSyncCustomDirs, generateUUID, showSyncNotice, isLargeBinarySyncRisk, describeBinarySyncLimit, logMemorySnapshot, isBinaryFileSyncDisabled } from "./helps";
+import { hashContent, hashContentAsync, hashArrayBuffer, dump, isPathExcluded, configIsPathExcluded, getConfigSyncCustomDirs, generateUUID, showSyncNotice, isLargeBinarySyncRisk, describeBinarySyncLimit, logMemorySnapshot, hashFileAsync } from "./helps";
 import { FileCloudPreview } from "./file_cloud_preview";
 import { SyncLogManager } from "./sync_log_manager";
 import type FastSync from "../main";
@@ -503,10 +503,7 @@ export const handleSync = async function (plugin: FastSync, isLoadLastTime: bool
 
           notes.push(item);
         } else {
-          if (isBinaryFileSyncDisabled()) {
-            dump(`Skip scanning attachment while binary sync is disabled: ${file.path}`);
-            continue;
-          }
+
           if (isLargeBinarySyncRisk(file.stat.size)) {
             dump(`Skip scanning large attachment (${describeBinarySyncLimit()} limit): ${file.path}`, file.stat.size);
             continue;
@@ -524,10 +521,7 @@ export const handleSync = async function (plugin: FastSync, isLoadLastTime: bool
           // 尝试从缓存获取有效的哈希，避免重复计算 (Try to get valid hash from cache)
           let contentHash = plugin.fileHashManager.getValidHash(file.path, file.stat.mtime, file.stat.size);
           if (contentHash === null) {
-            logMemorySnapshot(`before scan hash ${file.path}`);
-            let content: ArrayBuffer | null = await plugin.app.vault.readBinary(file);
-            contentHash = await hashArrayBuffer(content);
-            content = null;
+            contentHash = await hashFileAsync(plugin.app, file.path);
             logMemorySnapshot(`after scan hash ${file.path}`);
           }
 
@@ -841,7 +835,7 @@ export const handleRequestSend = async function (plugin: FastSync, syncMode: Syn
 
     // 如果启用了云预览且未开启类型限制，则不发送 FileSync 请求，从而关闭启动时的 file 同步
     // 若开启了类型限制，则需要发送以同步不受限类型的附件1
-    if (!isBinaryFileSyncDisabled() && (!plugin.settings.cloudPreviewEnabled || plugin.settings.cloudPreviewTypeRestricted)) {
+    if (!plugin.settings.cloudPreviewEnabled || plugin.settings.cloudPreviewTypeRestricted) {
       plugin.websocket.SendMessage("FileSync", fileSyncData);
     }
 

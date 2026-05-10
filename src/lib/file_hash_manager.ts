@@ -1,6 +1,6 @@
 import { TFile } from "obsidian";
 
-import { hashContent, hashContentAsync, hashArrayBuffer, dump, isPathExcluded, showSyncNotice, isLargeBinarySyncRisk, describeBinarySyncLimit, logMemorySnapshot, isBinaryFileSyncDisabled } from "./helps";
+import { hashContent, hashContentAsync, dump, isPathExcluded, showSyncNotice, isLargeBinarySyncRisk, describeBinarySyncLimit, logMemorySnapshot, hashFileAsync } from "./helps";
 import type FastSync from "../main";
 
 
@@ -85,19 +85,12 @@ export class FileHashManager {
             contentHash = await hashContentAsync(content);
             content = null; // 显式释放引用 (Explicitly release reference)
           } else {
-            if (isBinaryFileSyncDisabled()) {
-              dump(`FileHashManager: skip binary hash while binary sync is disabled: ${file.path}`);
-              continue;
-            }
+
             if (isLargeBinarySyncRisk(file.stat.size)) {
               dump(`FileHashManager: skip large binary hash (${describeBinarySyncLimit()} limit): ${file.path}`, file.stat.size);
               continue;
             }
-            // 非 md 文件使用二进制内容计算哈希
-            logMemorySnapshot(`before hash ${file.path}`);
-            let buffer: ArrayBuffer | null = await this.plugin.app.vault.readBinary(file);
-            contentHash = await hashArrayBuffer(buffer);
-            buffer = null; // 显式释放引用 (Explicitly release reference)
+            contentHash = await hashFileAsync(this.plugin.app, file.path);
             logMemorySnapshot(`after hash ${file.path}`);
           }
 

@@ -1,7 +1,7 @@
-import { TFile, TAbstractFile, Notice, normalizePath, Platform } from "obsidian";
+import { TFile, TAbstractFile, normalizePath, Platform } from "obsidian";
 
-import { ReceiveMessage, ReceiveFileSyncUpdateMessage, FileUploadMessage, FileSyncChunkDownloadMessage, FileDownloadSession, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
-import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, dumpTable, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, logMemorySnapshot, isBinaryFileSyncDisabled } from "./helps";
+import { ReceiveFileSyncUpdateMessage, FileUploadMessage, FileSyncChunkDownloadMessage, FileDownloadSession, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
+import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, dumpTable, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, logMemorySnapshot, hashFileAsync } from "./helps";
 import { FileCloudPreview } from "./file_cloud_preview";
 import { SyncLogManager } from "./sync_log_manager";
 import { HttpApiService } from "./api";
@@ -63,10 +63,7 @@ export const fileModify = async function (file: TAbstractFile, plugin: FastSync,
   if (eventEnter && !plugin.getWatchEnabled()) return
   if (eventEnter && plugin.isIgnoredFile(file.path)) return
   if (isPathExcluded(file.path, plugin)) return
-  if (isBinaryFileSyncDisabled()) {
-    dump(`Skip file modify while binary sync is disabled: ${file.path}`)
-    return
-  }
+
   if (isLargeBinarySyncRisk(file.stat.size)) {
     dump(`Skip file modify for large attachment (${describeBinarySyncLimit()} limit): ${file.path}`, file.stat.size)
     showSyncNotice(`Fast Note Sync skipped large file: ${file.path}`, 5000)
@@ -89,10 +86,7 @@ export const fileModify = async function (file: TAbstractFile, plugin: FastSync,
           return
         }
       } else {
-        logMemorySnapshot(`before modify read ${file.path}`)
-        content = await plugin.app.vault.readBinary(file)
-        contentHash = await hashArrayBuffer(content)
-        content = null
+        contentHash = await hashFileAsync(plugin.app, file.path);
         logMemorySnapshot(`after modify hash ${file.path}`)
       }
 
@@ -133,7 +127,7 @@ export const fileDelete = async function (file: TAbstractFile, plugin: FastSync,
   if (eventEnter && !plugin.getWatchEnabled()) return
   if (eventEnter && plugin.isIgnoredFile(file.path)) return
   if (isPathExcluded(file.path, plugin)) return
-  if (isBinaryFileSyncDisabled()) return
+
 
   // --- 新增：删除拦截 ---
   if (plugin.lastSyncPathDeleted.has(file.path)) {
@@ -186,7 +180,7 @@ export const fileDeleteByPath = async function (filePath: string, plugin: FastSy
   if (plugin.settings.syncEnabled == false || plugin.settings.readonlySyncEnabled) return
   if (filePath.endsWith(".md")) return
   if (isPathExcluded(filePath, plugin)) return
-  if (isBinaryFileSyncDisabled()) return
+
   if (plugin.lastSyncPathDeleted.has(filePath)) return
 
   await plugin.lockManager.withLock(filePath, async () => {
@@ -233,7 +227,7 @@ export const fileRename = async function (file: TAbstractFile, oldfile: string, 
   if (!plugin.getWatchEnabled() && eventEnter) return
   if (plugin.isIgnoredFile(file.path) && eventEnter) return
   if (isPathExcluded(file.path, plugin)) return
-  if (isBinaryFileSyncDisabled()) return
+
   if (!(file instanceof TFile)) return
 
   // --- 新增：重命名拦截 ---
@@ -264,8 +258,7 @@ export const fileRename = async function (file: TAbstractFile, oldfile: string, 
               dump(`Skip rename hash for large attachment (${describeBinarySyncLimit()} limit): ${file.path}`, file.stat.size)
               return
             }
-            const content: ArrayBuffer = await plugin.app.vault.readBinary(file)
-            contentHash = await hashArrayBuffer(content)
+            contentHash = await hashFileAsync(plugin.app, file.path)
           }
         }
 
@@ -294,11 +287,7 @@ export const fileRename = async function (file: TAbstractFile, oldfile: string, 
  */
 export const receiveFileUpload = async function (data: FileUploadMessage, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) {
-    dump(`Skip file upload request while binary sync is disabled: ${data.path}`)
-    plugin.fileSyncTasks.completed++
-    return
-  }
+
   if (plugin.settings.readonlySyncEnabled) {
     dump(`Read-only mode: Intercepted file upload request for ${data.path}`)
     plugin.fileSyncTasks.completed++
@@ -349,7 +338,7 @@ export const receiveFileUpload = async function (data: FileUploadMessage, plugin
         return;
       }
 
-      const contentHash = await hashArrayBuffer(content)
+      const contentHash = await hashFileAsync(plugin.app, file.path)
       logMemorySnapshot(`after upload hash ${data.path}`)
       // 将 hash 暂存到 pending map，等待服务端 FileUploadAck 后再写入 hashManager
       // Temporarily store hash in pending map, update hashManager only after server FileUploadAck
@@ -539,11 +528,7 @@ export const receiveFileUpload = async function (data: FileUploadMessage, plugin
  */
 export const receiveFileSyncUpdate = async function (data: ReceiveFileSyncUpdateMessage, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) {
-    dump(`Skip file sync update while binary sync is disabled: ${data.path}`)
-    plugin.fileSyncTasks.completed++;
-    return
-  }
+
   // 服务端推送说明该路径已有新内容，清除可能残留的 deleteAck pending 防止 Ack 删除新 hash
   // Server push means path has new content; clear stale deleteAck pending to protect newly-written hash
   plugin.pendingFileDeleteAcks.delete(data.path)
@@ -590,6 +575,7 @@ export const receiveFileSyncUpdate = async function (data: ReceiveFileSyncUpdate
     const tempKey = `temp_${data.path}`
     const tempSession = {
       path: data.path,
+      contentHash: data.contentHash,
       ctime: data.ctime,
       mtime: data.mtime,
       lastTime: data.lastTime,
@@ -627,10 +613,7 @@ export const receiveFileSyncUpdate = async function (data: ReceiveFileSyncUpdate
  */
 export const receiveFileSyncDelete = async function (data: ReceivePathMessage, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) {
-    plugin.fileSyncTasks.completed++;
-    return
-  }
+
   if (isPathExcluded(data.path, plugin)) {
     plugin.fileSyncTasks.completed++;
     return
@@ -687,10 +670,7 @@ export const receiveFileSyncDelete = async function (data: ReceivePathMessage, p
  */
 export const receiveFileSyncMtime = async function (data: ReceiveMtimeMessage, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) {
-    plugin.fileSyncTasks.completed++;
-    return
-  }
+
   if (isPathExcluded(data.path, plugin)) {
     plugin.fileSyncTasks.completed++;
     return
@@ -751,7 +731,7 @@ export const receiveFileSyncMtime = async function (data: ReceiveMtimeMessage, p
  */
 export const receiveFileSyncChunkDownload = async function (data: FileSyncChunkDownloadMessage, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) return
+
   dump(`Receive file chunk download: `, data.path, data.sessionId, `totalChunks: ${data.totalChunks}`)
 
   // 打印下载信息表格
@@ -772,6 +752,7 @@ export const receiveFileSyncChunkDownload = async function (data: FileSyncChunkD
   if (tempSession) {
     const session: FileDownloadSession = {
       path: data.path,
+      contentHash: data.contentHash,
       ctime: data.ctime,
       mtime: data.mtime,
       lastTime: tempSession.lastTime,
@@ -786,6 +767,7 @@ export const receiveFileSyncChunkDownload = async function (data: FileSyncChunkD
   } else {
     const session: FileDownloadSession = {
       path: data.path,
+      contentHash: data.contentHash,
       ctime: data.ctime,
       mtime: data.mtime,
       lastTime: 0,
@@ -899,7 +881,7 @@ export const checkAndUploadAttachments = async function (plugin: FastSync) {
  */
 export const handleFileChunkDownload = async function (buf: ArrayBuffer | Blob, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) return
+
   const binaryData = buf instanceof Blob ? await buf.arrayBuffer() : buf
   if (binaryData.byteLength < 40) return
 
@@ -949,10 +931,7 @@ export const handleFileChunkDownload = async function (buf: ArrayBuffer | Blob, 
  */
 export const receiveFileSyncRename = async function (data: any, plugin: FastSync) {
   if (plugin.settings.syncEnabled == false) return
-  if (isBinaryFileSyncDisabled()) {
-    plugin.fileSyncTasks.completed++;
-    return
-  }
+
   if (isPathExcluded(data.path, plugin) || isPathExcluded(data.oldPath, plugin)) {
     plugin.fileSyncTasks.completed++;
     return
@@ -1018,8 +997,7 @@ export const receiveFileSyncRename = async function (data: any, plugin: FastSync
             plugin.fileSyncTasks.completed++
             return
           }
-          const content = await plugin.app.vault.readBinary(targetFile)
-          const localContentHash = await hashArrayBuffer(content)
+          const localContentHash = await hashFileAsync(plugin.app, targetFile.path)
           if (localContentHash === data.contentHash) {
             dump(`Target attachment already exists and matches hash, skipping rename: ${data.path}`)
             plugin.fileHashManager.setFileHash(data.path, data.contentHash, targetFile.stat.mtime, targetFile.stat.size)
@@ -1124,8 +1102,14 @@ const handleFileChunkDownloadComplete = async function (session: FileDownloadSes
         plugin.localStorageManager.setMetadata("lastFileSyncTime", session.lastTime)
       }
 
-      // 下载完成后自动计算哈希并更新缓存
-      const contentHash = await hashArrayBuffer(completeFile.buffer)
+      // 下载完成后自动计算哈希并更新缓存 (如果服务器传了内容哈希就直接使用，否则重新计算以兼容旧版本)
+      let contentHash = session.contentHash
+      if (!contentHash) {
+        contentHash = await hashArrayBuffer(completeFile.buffer)
+        dump(`Download complete: server missing hash, local calculated: ${session.path}`, contentHash)
+      } else {
+        dump(`Download complete: using server provided hash: ${session.path}`, contentHash)
+      }
       plugin.fileHashManager.setFileHash(session.path, contentHash, session.mtime, session.size)
       // 记录同步后的 mtime
       plugin.lastSyncMtime.set(session.path, session.mtime)

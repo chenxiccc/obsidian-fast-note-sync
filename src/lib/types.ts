@@ -60,6 +60,7 @@ export interface FileUploadMessage {
 
 export interface FileSyncChunkDownloadMessage {
     path: string;
+    contentHash?: string;
     ctime: number;
     mtime: number;
     sessionId: string;
@@ -70,6 +71,7 @@ export interface FileSyncChunkDownloadMessage {
 
 export interface FileDownloadSession {
     path: string;
+    contentHash?: string;
     ctime: number;
     mtime: number;
     lastTime: number;

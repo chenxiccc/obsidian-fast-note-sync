@@ -1,6 +1,6 @@
 import { normalizePath } from "obsidian";
 
-import { hashContent, hashContentAsync, hashArrayBuffer, dump, configIsPathExcluded, getConfigSyncCustomDirs, showSyncNotice } from "./helps";
+import { hashContent, hashContentAsync, dump, configIsPathExcluded, getConfigSyncCustomDirs, showSyncNotice, hashFileAsync } from "./helps";
 import { configAllPaths } from "./config_operator";
 import type FastSync from "../main";
 
@@ -67,7 +67,7 @@ export class ConfigHashManager {
             const customDirs = getConfigSyncCustomDirs(this.plugin);
             const configPaths = await configAllPaths([configDir, ...customDirs], this.plugin);
 
-            // 添加 LocalStorage 虚拟路径
+            // 添加 LocalStorage 虚拟路径7
             const localStorageConfigs = await this.plugin.localStorageManager.getStorageConfigs();
             const allPaths = [...configPaths, ...localStorageConfigs.map(c => c.path)];
 
@@ -105,10 +105,8 @@ export class ConfigHashManager {
                     try {
                         const stat = await this.plugin.app.vault.adapter.stat(filePath);
                         if (stat) {
-                            let contentBuf: ArrayBuffer | null = await this.plugin.app.vault.adapter.readBinary(filePath);
-                            contentHash = await hashArrayBuffer(contentBuf);
+                            contentHash = await hashFileAsync(this.plugin.app, filePath);
                             this.hashMap.set(path, { hash: contentHash, mtime: stat.mtime, size: stat.size });
-                            contentBuf = null; // 显式释放引用 (Explicitly release reference)
                         }
                     } catch (error) {
                         console.error("读取配置文件出错:", error);

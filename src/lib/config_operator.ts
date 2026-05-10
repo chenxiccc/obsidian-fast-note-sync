@@ -1,6 +1,6 @@
 import { normalizePath } from "obsidian";
 
-import { hashContent, hashArrayBuffer, dump, configIsPathExcluded, configAddPathExcluded, getSafeCtime, isPathInConfigSyncDirs, showSyncNotice, isInWhitelist } from "./helps";
+import { hashContent, dump, configIsPathExcluded, configAddPathExcluded, getSafeCtime, isPathInConfigSyncDirs, showSyncNotice, isInWhitelist, hashFileAsync } from "./helps";
 import { ReceiveMessage, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
 import type FastSync from "../main";
 import { $ } from "../i18n/lang";
@@ -51,9 +51,9 @@ export const configModify = async function (path: string, plugin: FastSync, even
             if (exists) {
                 const stat = await plugin.app.vault.adapter.stat(filePath)
                 if (stat) {
+                    contentHash = await hashFileAsync(plugin.app, filePath)
                     const contentBuf = await plugin.app.vault.adapter.readBinary(filePath)
                     contentStr = new TextDecoder().decode(contentBuf)
-                    contentHash = await hashArrayBuffer(contentBuf)
                     mtime = stat.mtime
                     ctime = getSafeCtime(stat)
                 }
@@ -229,16 +229,17 @@ export const receiveConfigUpload = async function (data: ReceivePathMessage, plu
 
     try {
         const exists = await plugin.app.vault.adapter.exists(filePath);
-        if (exists) {
-            const stat = await plugin.app.vault.adapter.stat(filePath);
-            if (stat) {
-                contentBuf = await plugin.app.vault.adapter.readBinary(filePath);
-                contentStr = new TextDecoder().decode(contentBuf);
-                contentHash = await hashArrayBuffer(contentBuf);
-                mtime = stat.mtime;
-                ctime = getSafeCtime(stat);
+            if (exists) {
+                const stat = await plugin.app.vault.adapter.stat(filePath);
+                if (stat) {
+                    contentHash = await hashFileAsync(plugin.app, filePath);
+                    const contentBufRead = await plugin.app.vault.adapter.readBinary(filePath);
+                    contentStr = new TextDecoder().decode(contentBufRead);
+                    contentBuf = contentBufRead; // 保持兼容性逻辑
+                    mtime = stat.mtime;
+                    ctime = getSafeCtime(stat);
+                }
             }
-        }
     } catch (error) {
         console.error("读取配置文件出错:", error);
         return

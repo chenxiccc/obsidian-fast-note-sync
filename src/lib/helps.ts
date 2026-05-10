@@ -353,12 +353,12 @@ export const hashContentAsync = async function (content: string): Promise<string
   return String(hash)
 }
 
-const FILE_HASH_THRESHOLD = 100 * 1024 * 1024 // 100MB
-const FILE_HASH_SLICE_SIZE = 50 * 1024 * 1024 // 50MB
+const FILE_HASH_THRESHOLD = 10 * 1024 * 1024 // 10MB
+const FILE_HASH_SLICE_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
  * 对 ArrayBuffer 进行哈希 (统一采用 JS 数字滚动哈希以保持一致性)
- * 对于超过 100MB 的数据，仅计算前 50MB 和后 50MB 的哈希值。
+ * 对于超过 10MB 的数据，仅计算前 5MB 和后 5MB 的哈希值。
  * 分段计算并适时让出主线程，防止大文件导致 UI 卡顿 (Processed in chunks to yield main thread)
  */
 export const hashArrayBuffer = async function (buffer: ArrayBuffer): Promise<string> {
@@ -375,11 +375,66 @@ export const hashArrayBuffer = async function (buffer: ArrayBuffer): Promise<str
     view.set(fullView.subarray(size - FILE_HASH_SLICE_SIZE), FILE_HASH_SLICE_SIZE)
   }
 
+  return await computeRollingHash(view)
+}
+
+/**
+ * 内部工具函数：使用 fetch + Range 协议读取文件的指定范围 (Internal helper: Read file range using fetch + Range)
+ */
+async function readRange(app: App, path: string, offset: number, length: number): Promise<ArrayBuffer> {
+  const url = app.vault.adapter.getResourcePath(path)
+  const response = await fetch(url, {
+    headers: {
+      'Range': `bytes=${offset}-${offset + length - 1}`
+    }
+  })
+
+  if (response.status === 206 || response.status === 200) {
+    const buffer = await response.arrayBuffer()
+    // 如果服务器不支持 206 返回了 200 (全量)，则在此处截取 (Slice if server returned 200 instead of 206)
+    if (response.status === 200 && buffer.byteLength > length) {
+      return buffer.slice(offset, offset + length)
+    }
+    return buffer
+  }
+  throw new Error(`Failed to read file range via fetch: ${response.status}`)
+}
+
+/**
+ * 直接通过文件路径计算哈希 (优化：大文件仅读取首尾，避免 OOM)
+ * Calculate hash directly from file path (Optimization: read only head/tail for large files to avoid OOM)
+ */
+export const hashFileAsync = async function (app: App, path: string): Promise<string> {
+  const stat = await app.vault.adapter.stat(path)
+  if (!stat) return "0"
+
+  const size = stat.size
+  let view: Uint8Array
+
+  if (size <= FILE_HASH_THRESHOLD) {
+    // 小文件直接读取 (Read small files directly)
+    const buffer = await app.vault.adapter.readBinary(path)
+    view = new Uint8Array(buffer)
+  } else {
+    // 大文件优化：使用 fetch + Range 仅读取前 5MB 和后 5MB (Large file optimization: fetch first/last 5MB only)
+    const head = await readRange(app, path, 0, FILE_HASH_SLICE_SIZE)
+    const tail = await readRange(app, path, size - FILE_HASH_SLICE_SIZE, FILE_HASH_SLICE_SIZE)
+
+    view = new Uint8Array(FILE_HASH_SLICE_SIZE * 2)
+    view.set(new Uint8Array(head), 0)
+    view.set(new Uint8Array(tail), FILE_HASH_SLICE_SIZE)
+  }
+
+  return await computeRollingHash(view)
+}
+
+/**
+ * 内部统一哈希计算逻辑 (Internal unified hashing logic)
+ */
+async function computeRollingHash(view: Uint8Array): Promise<string> {
   let hash = 0
   const len = view.length
-
-  // 每 512KB 让出一次主线程 (Yield every 512KB)
-  const yieldSize = 512 * 1024
+  const yieldSize = 512 * 1024 // 每 512KB 让出一次主线程 (Yield every 512KB)
 
   for (let i = 0; i < len; i++) {
     const byte = view[i]
@@ -395,12 +450,9 @@ export const hashArrayBuffer = async function (buffer: ArrayBuffer): Promise<str
   return result
 }
 
-export const MAX_IN_MEMORY_FILE_SYNC_BYTES = 128 * 1024 * 1024
-export const BINARY_FILE_SYNC_ENABLED = true
 
-export const isBinaryFileSyncDisabled = function (): boolean {
-  return !BINARY_FILE_SYNC_ENABLED
-}
+export const MAX_IN_MEMORY_FILE_SYNC_BYTES = 128 * 1024 * 1024
+
 
 export const isLargeBinarySyncRisk = function (size: number): boolean {
   return typeof size === "number" && size > MAX_IN_MEMORY_FILE_SYNC_BYTES
@@ -437,22 +489,7 @@ export const getSafeCtime = function (stat: { ctime?: number; mtime?: number }):
  * =============================================================================
  */
 
-/**
- * 将时间戳转换为格式化的日期字符串 (YYYY-MM-DD HH:mm:ss)
- */
-export const timestampToDate = function (timestamp: number): string {
-  return moment(timestamp).format("YYYY-MM-DD HH:mm:ss")
-}
 
-/**
- * 将日期字符串转换为格式化的日期字符串 (YYYY-MM-DD HH:mm:ss)
- */
-export const stringToDate = function (date: string): string {
-  if (!date || date == "") {
-    date = "1970-01-01 00:00:00"
-  }
-  return moment(date).format("YYYY-MM-DD HH:mm:ss")
-}
 
 /**
  * 延迟执行 (让出主线程)
@@ -503,9 +540,7 @@ export const waitForFolderEmpty = async function (path: string, plugin: FastSync
  * =============================================================================
  */
 
-export function isHttpUrl(url: string): boolean {
-  return /^https?:\/\/.+/i.test(url)
-}
+
 
 export function isWsUrl(url: string): boolean {
   return /^wss?:\/\/.+/i.test(url)
