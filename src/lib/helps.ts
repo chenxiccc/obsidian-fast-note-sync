@@ -62,6 +62,31 @@ export const getDirNameOrEmpty = function (path: string): string {
 }
 
 /**
+ * 清洗文件名中的非法字符 (Sanitize illegal characters in file name)
+ * Obsidian 不允许在文件名中使用: \ / : * ? " < > |
+ */
+export const sanitizeFileName = function (name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, "-");
+}
+
+/**
+ * 清洗完整路径中的非法字符 (Sanitize illegal characters in full path)
+ * 保留路径分隔符 /，但清洗每一段的名称
+ */
+export const sanitizePath = function (path: string): string {
+  if (!path) return path;
+  // 先统一斜杠
+  const normalized = path.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  const sanitizedParts = parts.map((part, index) => {
+    // 如果是最后一部分且为空（以/结尾的情况），保持原样
+    if (index === parts.length - 1 && part === "") return part;
+    return sanitizeFileName(part);
+  });
+  return sanitizedParts.join("/");
+}
+
+/**
  * 正则表达式缓存，避免重复编译
  * Regex cache to avoid redundant compilation
  */

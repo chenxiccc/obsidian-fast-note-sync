@@ -1,6 +1,7 @@
 import { normalizePath, App } from "obsidian";
 
 import { hashContent, dump, configIsPathExcluded, getSafeCtime, isPathInConfigSyncDirs, showSyncNotice, isInWhitelist, hashFileAsync } from "./helps";
+import { SyncLogManager } from "./sync_log_manager";
 import { ReceiveMessage, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
 import type FastSync from "../main";
 import { $ } from "../i18n/lang";
@@ -174,6 +175,7 @@ export const receiveConfigSyncModify = async function (data: ReceiveMessage, plu
         await plugin.app.vault.adapter.write(filePath, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
     } catch (e) {
         console.error("[writeConfigFile] error:", e)
+        SyncLogManager.getInstance().addLog('receive', 'ConfigModify', e instanceof Error ? e.message : String(e), 'error', data.path);
     }
 
     await configReload(data.path, plugin, false, data.content)
@@ -299,6 +301,7 @@ export const receiveConfigSyncMtime = async function (data: ReceiveMtimeMessage,
         }
     } catch (e) {
         console.error("[updateConfigFileTime] error:", e)
+        SyncLogManager.getInstance().addLog('receive', 'ConfigMtime', e instanceof Error ? e.message : String(e), 'error', data.path);
     }
     plugin.removeIgnoredConfigFile(data.path)
 
@@ -321,23 +324,28 @@ export const receiveConfigSyncDelete = async function (data: { path: string, las
     }
     if (plugin.ignoredConfigFiles.has(data.path)) return
 
-    const fullPath = normalizePath(data.path)
-    if (await plugin.app.vault.adapter.exists(fullPath)) {
-        // 记录删除路径
-        plugin.lastSyncPathDeleted.add(data.path)
-        try {
-            await plugin.app.vault.adapter.remove(fullPath)
-        } finally {
-            // 延时 500ms 清理
-            window.setTimeout(() => {
-                plugin.lastSyncPathDeleted.delete(data.path)
-            }, 500);
+    try {
+        const fullPath = normalizePath(data.path)
+        if (await plugin.app.vault.adapter.exists(fullPath)) {
+            // 记录删除路径
+            plugin.lastSyncPathDeleted.add(data.path)
+            try {
+                await plugin.app.vault.adapter.remove(fullPath)
+            } finally {
+                // 延时 500ms 清理
+                window.setTimeout(() => {
+                    plugin.lastSyncPathDeleted.delete(data.path)
+                }, 500);
+            }
         }
+    } catch (e) {
+        console.error("[receiveConfigSyncDelete] error:", e)
+        SyncLogManager.getInstance().addLog('receive', 'ConfigDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
     }
 
     // 更新 ConfigManager 的文件状态
     if (plugin.configManager) {
-        plugin.configManager.removeFileState(fullPath)
+        plugin.configManager.removeFileState(normalizePath(data.path))
     }
 
     // 从配置哈希表中删除

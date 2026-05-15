@@ -2,6 +2,7 @@ import { TFile, TAbstractFile, normalizePath } from "obsidian";
 
 import { ReceiveMessage, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
 import { hashContent, hashContentAsync, dump, isPathExcluded, getSafeCtime } from "./helps";
+import { SyncLogManager } from "./sync_log_manager";
 import type FastSync from "../main";
 
 
@@ -207,53 +208,59 @@ export const receiveNoteSyncModify = async function (data: ReceiveMessage, plugi
 
   const normalizedPath = normalizePath(data.path)
 
-  await plugin.lockManager.withLock(normalizedPath, async () => {
-    const file = plugin.app.vault.getFileByPath(normalizedPath)
-    plugin.addIgnoredFile(normalizedPath)
-    try {
-      if (file) {
-        await plugin.app.vault.modify(file, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
-      } else {
-        const folder = normalizedPath.split("/").slice(0, -1).join("/")
-        if (folder != "") {
-          const dirExists = plugin.app.vault.getFolderByPath(folder)
-          if (dirExists == null) {
-            try {
-              await plugin.app.vault.createFolder(folder)
-            } catch (e) {
-              // 并发竞争时只有一个调用成功，另一方忽略"已存在"错误
-              // In concurrent race only one call succeeds; ignore "already exists" error
-              if (!plugin.app.vault.getFolderByPath(folder)) throw e
+  try {
+    await plugin.lockManager.withLock(normalizedPath, async () => {
+      const file = plugin.app.vault.getFileByPath(normalizedPath)
+      plugin.addIgnoredFile(normalizedPath)
+      try {
+        if (file) {
+          await plugin.app.vault.modify(file, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
+        } else {
+          const folder = normalizedPath.split("/").slice(0, -1).join("/")
+          if (folder != "") {
+            const dirExists = plugin.app.vault.getFolderByPath(folder)
+            if (dirExists == null) {
+              try {
+                await plugin.app.vault.createFolder(folder)
+              } catch (e) {
+                // 并发竞争时只有一个调用成功，另一方忽略"已存在"错误
+                // In concurrent race only one call succeeds; ignore "already exists" error
+                if (!plugin.app.vault.getFolderByPath(folder)) throw e
+              }
             }
           }
+          await plugin.app.vault.create(normalizedPath, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
         }
-        await plugin.app.vault.create(normalizedPath, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
-      }
-      if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
-        plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
-      }
+        if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
+          plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+        }
 
-      // 服务端推送笔记更新,更新哈希表(使用内容哈希)
-      // 注意：由于是服务端推送，我们信任服务端返回的 mtime，并尝试获取本地文件大小
-      const updatedFile = plugin.app.vault.getFileByPath(normalizedPath);
-      plugin.fileHashManager.setFileHash(data.path, data.contentHash, data.mtime, updatedFile?.stat.size || 0)
-      // 记录同步后的 mtime 用于拦截
-      plugin.lastSyncMtime.set(data.path, data.mtime)
-      // 服务端版本已覆盖本地，清理 pending 避免增量过滤器旁路导致该笔记无限重传
-      // Server version overrides local; clear pending to avoid incremental filter bypass loop
-      plugin.pendingNoteModifies.delete(data.path)
-      plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
-      // 服务端推送新内容说明该路径已被创建/更新，清理可能残留的 deleteAck pending
-      // Server push means path was created/updated; clear any stale deleteAck pending
-      plugin.pendingNoteDeleteAcks.delete(data.path)
-    } finally {
-      window.setTimeout(() => {
-        plugin.removeIgnoredFile(normalizedPath)
-      }, 500);
-    }
-  }, { maxRetries: 5, retryInterval: 100 });
-
-  plugin.noteSyncTasks.completed++
+        // 服务端推送笔记更新,更新哈希表(使用内容哈希)
+        // 注意：由于是服务端推送，我们信任服务端返回的 mtime，并尝试获取本地文件大小
+        const updatedFile = plugin.app.vault.getFileByPath(normalizedPath);
+        plugin.fileHashManager.setFileHash(data.path, data.contentHash, data.mtime, updatedFile?.stat.size || 0)
+        // 记录同步后的 mtime 用于拦截
+        plugin.lastSyncMtime.set(data.path, data.mtime)
+        // 服务端版本已覆盖本地，清理 pending 避免增量过滤器旁路导致该笔记无限重传
+        // Server version overrides local; clear pending to avoid incremental filter bypass loop
+        plugin.pendingNoteModifies.delete(data.path)
+        plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
+        // 服务端推送新内容说明该路径已被创建/更新，清理可能残留 de deleteAck pending
+        // Server push means path was created/updated; clear any stale deleteAck pending
+        plugin.pendingNoteDeleteAcks.delete(data.path)
+      } finally {
+        window.setTimeout(() => {
+          plugin.removeIgnoredFile(normalizedPath)
+        }, 500);
+      }
+    }, { maxRetries: 5, retryInterval: 100 });
+  } catch (e) {
+    console.error(`[FastSync] Failed to receiveNoteSyncModify: ${normalizedPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'NoteModify', e instanceof Error ? e.message : String(e), 'error', data.path);
+    dump(`Error in receiveNoteSyncModify: ${normalizedPath}`, e);
+  } finally {
+    plugin.noteSyncTasks.completed++
+  }
 }
 
 /**
@@ -331,34 +338,40 @@ export const receiveNoteSyncMtime = async function (data: ReceiveMtimeMessage, p
 
   const normalizedPath = normalizePath(data.path)
 
-  await plugin.lockManager.withLock(normalizedPath, async () => {
-    const file = plugin.app.vault.getFileByPath(normalizedPath)
-    if (file) {
-      const content: string = await plugin.app.vault.read(file)
-      plugin.addIgnoredFile(normalizedPath)
-      try {
-        await plugin.app.vault.modify(file, content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
-        // 记录 mtime
-        plugin.lastSyncMtime.set(data.path, data.mtime)
-        // 服务端走 UpdateMtime 说明内容 hash 与客户端发送的一致，提交 pending hash 到 hashManager
-        // Server UpdateMtime means content hash matches what client sent; commit pending hash to hashManager
-        const pendingHash = plugin.pendingNoteModifies.get(data.path)
-        if (pendingHash !== undefined) {
-          plugin.fileHashManager.setFileHash(data.path, pendingHash, data.mtime, file.stat.size)
-          plugin.pendingNoteModifies.delete(data.path)
-          plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
+  try {
+    await plugin.lockManager.withLock(normalizedPath, async () => {
+      const file = plugin.app.vault.getFileByPath(normalizedPath)
+      if (file) {
+        const content: string = await plugin.app.vault.read(file)
+        plugin.addIgnoredFile(normalizedPath)
+        try {
+          await plugin.app.vault.modify(file, content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
+          // 记录 mtime
+          plugin.lastSyncMtime.set(data.path, data.mtime)
+          // 服务端走 UpdateMtime 说明内容 hash 与客户端发送的一致，提交 pending hash 到 hashManager
+          // Server UpdateMtime means content hash matches what client sent; commit pending hash to hashManager
+          const pendingHash = plugin.pendingNoteModifies.get(data.path)
+          if (pendingHash !== undefined) {
+            plugin.fileHashManager.setFileHash(data.path, pendingHash, data.mtime, file.stat.size)
+            plugin.pendingNoteModifies.delete(data.path)
+            plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
+          }
+          // 更新同步时间
+          if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
+            plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+          }
+        } finally {
+          plugin.removeIgnoredFile(normalizedPath)
         }
-        // 更新同步时间
-        if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
-          plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
-        }
-      } finally {
-        plugin.removeIgnoredFile(normalizedPath)
       }
-    }
-  }, { maxRetries: 5, retryInterval: 100 });
-
-  plugin.noteSyncTasks.completed++
+    }, { maxRetries: 5, retryInterval: 100 });
+  } catch (e) {
+    console.error(`[FastSync] Failed to receiveNoteSyncMtime: ${normalizedPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'NoteMtime', e instanceof Error ? e.message : String(e), 'error', data.path);
+    dump(`Error in receiveNoteSyncMtime: ${normalizedPath}`, e);
+  } finally {
+    plugin.noteSyncTasks.completed++
+  }
 }
 
 /**
@@ -373,37 +386,43 @@ export const receiveNoteSyncDelete = async function (data: ReceiveMessage, plugi
   dump(`Receive note delete:`, data.path, data.mtime, data.pathHash)
   const normalizedPath = normalizePath(data.path)
 
-  await plugin.lockManager.withLock(normalizedPath, async () => {
-    const file = plugin.app.vault.getFileByPath(normalizedPath)
-    if (file instanceof TFile) {
-      plugin.addIgnoredFile(normalizedPath)
-      // 记录待删除路径，用于拦截本地删除事件
-      plugin.lastSyncPathDeleted.add(normalizedPath)
-      try {
-        // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-        await plugin.app.vault.delete(file)
-        // 服务端推送删除,从哈希表中移除
-        plugin.fileHashManager.removeFileHash(normalizedPath)
-        plugin.lastSyncMtime.delete(normalizedPath)
-        // 清理 pending，避免已删除路径的 pending 条目泄漏
-        // Clean up pending to prevent memory leak for deleted path
-        plugin.pendingNoteModifies.delete(normalizedPath)
-        plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
-        // 更新同步时间
-        if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
-          plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+  try {
+    await plugin.lockManager.withLock(normalizedPath, async () => {
+      const file = plugin.app.vault.getFileByPath(normalizedPath)
+      if (file instanceof TFile) {
+        plugin.addIgnoredFile(normalizedPath)
+        // 记录待删除路径，用于拦截本地删除事件
+        plugin.lastSyncPathDeleted.add(normalizedPath)
+        try {
+          // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
+          await plugin.app.vault.delete(file)
+          // 服务端推送删除,从哈希表中移除
+          plugin.fileHashManager.removeFileHash(normalizedPath)
+          plugin.lastSyncMtime.delete(normalizedPath)
+          // 清理 pending，避免已删除路径的 pending 条目泄漏
+          // Clean up pending to prevent memory leak for deleted path
+          plugin.pendingNoteModifies.delete(normalizedPath)
+          plugin.localStorageManager.savePending('pendingNoteModifies', plugin.pendingNoteModifies)
+          // 更新同步时间
+          if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
+            plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+          }
+        } finally {
+          // 延时 500ms 清理拦截集合，确保本地事件已被处理
+          window.setTimeout(() => {
+            plugin.removeIgnoredFile(normalizedPath)
+            plugin.lastSyncPathDeleted.delete(normalizedPath)
+          }, 500);
         }
-      } finally {
-        // 延时 500ms 清理拦截集合，确保本地事件已被处理
-        window.setTimeout(() => {
-          plugin.removeIgnoredFile(normalizedPath)
-          plugin.lastSyncPathDeleted.delete(normalizedPath)
-        }, 500);
       }
-    }
-  }, { maxRetries: 5, retryInterval: 100 });
-
-  plugin.noteSyncTasks.completed++
+    }, { maxRetries: 5, retryInterval: 100 });
+  } catch (e) {
+    console.error(`[FastSync] Failed to receiveNoteSyncDelete: ${normalizedPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'NoteDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
+    dump(`Error in receiveNoteSyncDelete: ${normalizedPath}`, e);
+  } finally {
+    plugin.noteSyncTasks.completed++
+  }
 }
 
 /**
@@ -441,83 +460,89 @@ export const receiveNoteSyncRename = async function (data: { path: string, oldPa
   const normalizedOldPath = normalizePath(data.oldPath)
   const normalizedNewPath = normalizePath(data.path)
 
-  // 对于重命名，我们需要确新路径不被占用。旧路径通常正在被移动，所以锁定新路径。
-  await plugin.lockManager.withLock(normalizedNewPath, async () => {
-    const file = plugin.app.vault.getFileByPath(normalizedOldPath)
-    if (file instanceof TFile) {
-      plugin.addIgnoredFile(normalizedNewPath)
-      plugin.addIgnoredFile(normalizedOldPath)
+  try {
+    // 对于重命名，我们需要确新路径不被占用。旧路径通常正在被移动，所以锁定新路径。
+    await plugin.lockManager.withLock(normalizedNewPath, async () => {
+      const file = plugin.app.vault.getFileByPath(normalizedOldPath)
+      if (file instanceof TFile) {
+        plugin.addIgnoredFile(normalizedNewPath)
+        plugin.addIgnoredFile(normalizedOldPath)
 
-      // 记录重命名后的新路径，用于拦截本地事件
-      plugin.lastSyncPathRenamed.add(normalizedNewPath)
+        // 记录重命名后的新路径，用于拦截本地事件
+        plugin.lastSyncPathRenamed.add(normalizedNewPath)
 
-      try {
-        // 如果目标路径已存在文件，先尝试删除
-        const targetFile = plugin.app.vault.getFileByPath(normalizedNewPath)
-        if (targetFile) {
-          // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-          await plugin.app.vault.delete(targetFile)
-        }
+        try {
+          // 如果目标路径已存在文件，先尝试删除
+          const targetFile = plugin.app.vault.getFileByPath(normalizedNewPath)
+          if (targetFile) {
+            // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
+            await plugin.app.vault.delete(targetFile)
+          }
 
-        await plugin.app.vault.rename(file, normalizedNewPath)
+          await plugin.app.vault.rename(file, normalizedNewPath)
 
-        // 更新元数据
-        if (data.mtime) {
+          // 更新元数据
+          if (data.mtime) {
+            const renamedFile = plugin.app.vault.getFileByPath(normalizedNewPath)
+            if (renamedFile instanceof TFile) {
+              const content = await plugin.app.vault.read(renamedFile)
+              const options: { ctime?: number; mtime?: number } = {};
+              if (data.ctime && data.ctime > 0) options.ctime = data.ctime;
+              if (data.mtime && data.mtime > 0) options.mtime = data.mtime;
+              await plugin.app.vault.modify(renamedFile, content, options);
+            }
+          }
+
+          // 更新哈希表：移除旧路径，添加新路径
+          plugin.fileHashManager.removeFileHash(data.oldPath)
           const renamedFile = plugin.app.vault.getFileByPath(normalizedNewPath)
-          if (renamedFile instanceof TFile) {
-            const content = await plugin.app.vault.read(renamedFile)
-            const options: { ctime?: number; mtime?: number } = {};
-            if (data.ctime && data.ctime > 0) options.ctime = data.ctime;
-            if (data.mtime && data.mtime > 0) options.mtime = data.mtime;
-            await plugin.app.vault.modify(renamedFile, content, options);
+          plugin.fileHashManager.setFileHash(data.path, data.contentHash, data.mtime || (renamedFile instanceof TFile ? renamedFile.stat.mtime : 0), renamedFile instanceof TFile ? renamedFile.stat.size : 0)
+
+          // 更新同步时间
+          if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
+            plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+          }
+        } finally {
+          window.setTimeout(() => {
+            plugin.removeIgnoredFile(normalizedNewPath)
+            plugin.removeIgnoredFile(normalizedOldPath)
+            plugin.lastSyncPathRenamed.delete(normalizedNewPath)
+          }, 500);
+        }
+      } else {
+        // 找不到旧文件...
+        const targetFile = plugin.app.vault.getFileByPath(normalizedNewPath)
+        if (targetFile instanceof TFile) {
+          const content = await plugin.app.vault.read(targetFile)
+          const localContentHash = await hashContentAsync(content)
+          if (localContentHash === data.contentHash) {
+            dump(`Target file already exists and matches hash, skipping rename: ${data.path}`)
+            plugin.fileHashManager.setFileHash(data.path, data.contentHash)
+            return
           }
         }
 
-        // 更新哈希表：移除旧路径，添加新路径
-        plugin.fileHashManager.removeFileHash(data.oldPath)
-        const renamedFile = plugin.app.vault.getFileByPath(normalizedNewPath)
-        plugin.fileHashManager.setFileHash(data.path, data.contentHash, data.mtime || (renamedFile instanceof TFile ? renamedFile.stat.mtime : 0), renamedFile instanceof TFile ? renamedFile.stat.size : 0)
-
-        // 更新同步时间
-        if (data.lastTime && data.lastTime > Number(plugin.localStorageManager.getMetadata("lastNoteSyncTime"))) {
-          plugin.localStorageManager.setMetadata("lastNoteSyncTime", data.lastTime)
+        dump(`Local file not found for rename, requesting RePush: ${data.oldPath} -> ${data.path}`)
+        const rePushData = {
+          vault: plugin.settings.vault,
+          path: data.path,
+          pathHash: data.pathHash,
         }
-      } finally {
-        window.setTimeout(() => {
-          plugin.removeIgnoredFile(normalizedNewPath)
-          plugin.removeIgnoredFile(normalizedOldPath)
-          plugin.lastSyncPathRenamed.delete(normalizedNewPath)
-        }, 500);
-      }
-    } else {
-      // 找不到旧文件...
-      const targetFile = plugin.app.vault.getFileByPath(normalizedNewPath)
-      if (targetFile instanceof TFile) {
-        const content = await plugin.app.vault.read(targetFile)
-        const localContentHash = await hashContentAsync(content)
-        if (localContentHash === data.contentHash) {
-          dump(`Target file already exists and matches hash, skipping rename: ${data.path}`)
+        void plugin.websocket.SendMessage("NoteRePush", rePushData)
+        if (targetFile instanceof TFile) {
+          plugin.fileHashManager.setFileHash(data.path, data.contentHash, targetFile.stat.mtime, targetFile.stat.size)
+        } else {
           plugin.fileHashManager.setFileHash(data.path, data.contentHash)
-          return
         }
       }
-
-      dump(`Local file not found for rename, requesting RePush: ${data.oldPath} -> ${data.path}`)
-      const rePushData = {
-        vault: plugin.settings.vault,
-        path: data.path,
-        pathHash: data.pathHash,
-      }
-      void plugin.websocket.SendMessage("NoteRePush", rePushData)
-      if (targetFile instanceof TFile) {
-        plugin.fileHashManager.setFileHash(data.path, data.contentHash, targetFile.stat.mtime, targetFile.stat.size)
-      } else {
-        plugin.fileHashManager.setFileHash(data.path, data.contentHash)
-      }
-    }
-  }, { maxRetries: 10, retryInterval: 100 });
-
-  plugin.noteSyncTasks.completed++
+    }, { maxRetries: 10, retryInterval: 100 });
+  } catch (e) {
+    console.error(`[FastSync] Failed to receiveNoteSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'NoteRename', e instanceof Error ? e.message : String(e), 'error', data.path);
+    dump(`Error in receiveNoteSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+  } finally {
+    plugin.noteSyncTasks.completed++
+  }
 }
 
 // 收到 NoteModifyAck，将 pending hash 转移到正式 hashManager 并更新 lastNoteSyncTime

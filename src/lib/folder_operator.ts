@@ -2,6 +2,7 @@ import { TFolder, normalizePath } from "obsidian";
 
 import { SyncEndData, FolderSyncRenameMessage } from "./types";
 import { hashContent, dump, isPathExcluded, waitForFolderEmpty } from "./helps";
+import { SyncLogManager } from "./sync_log_manager";
 import type FastSync from "../main";
 
 
@@ -138,6 +139,8 @@ export const receiveFolderSyncModify = async function (data: { path: string, mti
             }
         }, { maxRetries: 5, retryInterval: 100 });
     } catch (e) {
+        console.error(`[FastSync] Failed to receiveFolderSyncModify: ${normalizedPath}`, e);
+        SyncLogManager.getInstance().addLog('receive', 'FolderModify', e instanceof Error ? e.message : String(e), 'error', data.path);
         dump(`Error in receiveFolderSyncModify: ${normalizedPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致
@@ -184,6 +187,8 @@ export const receiveFolderSyncDelete = async function (data: { path: string, las
             }
         }, { maxRetries: 10, retryInterval: 200 });
     } catch (e) {
+        console.error(`[FastSync] Failed to receiveFolderSyncDelete: ${normalizedPath}`, e);
+        SyncLogManager.getInstance().addLog('receive', 'FolderDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
         dump(`Error in receiveFolderSyncDelete: ${normalizedPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致
@@ -250,6 +255,8 @@ export const receiveFolderSyncRename = async function (data: FolderSyncRenameMes
             }
         }, { maxRetries: 10, retryInterval: 100 });
     } catch (e) {
+        console.error(`[FastSync] Failed to receiveFolderSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+        SyncLogManager.getInstance().addLog('receive', 'FolderRename', e instanceof Error ? e.message : String(e), 'error', data.path);
         dump(`Error in receiveFolderSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致

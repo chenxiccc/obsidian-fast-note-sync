@@ -683,7 +683,10 @@ export const receiveFileSyncDelete = async function (data: ReceivePathMessage, p
         }, 500);
       }
     }
-  }, { maxRetries: 5, retryInterval: 100 });
+  }, { maxRetries: 5, retryInterval: 100 }).catch(e => {
+    dump(`Error in receiveFileSyncDelete: ${normalizedPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'FileDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
+  });
 
   plugin.fileSyncTasks.completed++
 }
@@ -744,7 +747,10 @@ export const receiveFileSyncMtime = async function (data: ReceiveMtimeMessage, p
         }, 500);
       }
     }
-  }, { maxRetries: 5, retryInterval: 100 });
+  }, { maxRetries: 5, retryInterval: 100 }).catch(e => {
+    dump(`Error in receiveFileSyncMtime: ${normalizedPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'FileMtime', e instanceof Error ? e.message : String(e), 'error', data.path);
+  });
 
   plugin.fileSyncTasks.completed++
 }
@@ -1054,7 +1060,10 @@ export const receiveFileSyncRename = async function (data: { oldPath: string; pa
         plugin.fileHashManager.setFileHash(data.path, data.contentHash, targetFile instanceof TFile ? targetFile.stat.mtime : 0, targetFile instanceof TFile ? targetFile.stat.size : 0)
       }
     }
-  }, { maxRetries: 10, retryInterval: 100 });
+  }, { maxRetries: 10, retryInterval: 100 }).catch(e => {
+    dump(`Error in receiveFileSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+    SyncLogManager.getInstance().addLog('receive', 'FileRename', e instanceof Error ? e.message : String(e), 'error', data.path);
+  });
 
   plugin.fileSyncTasks.completed++
 }
@@ -1162,6 +1171,7 @@ const handleFileChunkDownloadComplete = async function (session: FileDownloadSes
     plugin.downloadedFilesCount++
   } catch (e) {
     dump(`Error completing file download for ${session.path}`, e)
+    SyncLogManager.getInstance().addLog('receive', 'FileDownload', e instanceof Error ? e.message : String(e), 'error', session.path);
     const sessionSize = session.tempDir
       ? session.size
       : Array.from(session.chunks?.values() || []).reduce((sum, c) => sum + c.byteLength, 0)
