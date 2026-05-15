@@ -3078,5 +3078,50 @@ body .suggestion-container {
     transform: scale(0.95);
   }
 }
+/* ===== 调试日志弹窗 / Debug Log Modal ===== */
+.fns-debug-log-modal {
+  width: 650px;
+  height: 600px;
+  min-width: 350px;
+  min-height: 300px;
+  max-width: 95vw;
+  max-height: 95vh;
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.fns-debug-log-modal .modal-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 10px;
+}
+
+.fns-debug-log-container {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  padding: 12px;
+  background-color: var(--background-primary-alt);
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+  color: var(--text-normal);
+}
+
+.fns-debug-log-item {
+  padding: 2px 0;
+  border-bottom: 1px solid var(--background-modifier-border-faint);
+}
+.fns-debug-log-item:last-child {
+  border-bottom: none;
+}
 
 /*# sourceMappingURL=styles.css.map */

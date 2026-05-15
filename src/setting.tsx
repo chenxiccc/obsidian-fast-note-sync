@@ -776,7 +776,7 @@ export class SettingTab extends PluginSettingTab {
 
     if (this.plugin.settings.logEnabled === "internal") {
       new Setting(set).setName($("setting.support.log_view")).addButton((btn) =>
-        btn.setButtonText($("ui.log.view_log")).onClick(() => {
+        btn.setButtonText($("setting.support.log_view")).onClick(() => {
           new DebugLogModal(this.app).open()
         }),
       )

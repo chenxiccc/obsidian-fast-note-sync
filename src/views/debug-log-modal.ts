@@ -8,7 +8,8 @@ export class DebugLogModal extends Modal {
     }
 
     onOpen() {
-        const { contentEl, titleEl } = this;
+        const { contentEl, titleEl, modalEl } = this;
+        modalEl.addClass("fns-debug-log-modal");
         titleEl.setText($("ui.log.debug_title"));
 
         const container = contentEl.createDiv({ cls: "fns-debug-log-container" });
