@@ -359,6 +359,15 @@ export default class FastSync extends Plugin {
           new RecycleBinModal(this.app, this).open();
         },
       });
+      
+      this.addCommand({
+        id: "open-debug-log",
+        name: $("ui.log.debug_title"),
+        callback: () => {
+          const { DebugLogModal } = require("./views/debug-log-modal");
+          new DebugLogModal(this.app).open();
+        },
+      });
 
       // 3. 初始化 UI 管理器（ribbon 已在 onLayoutReady 之前创建，这里只完成其余初始化）
       // UI manager: ribbon was already created before onLayoutReady; finish the rest here
@@ -606,6 +615,12 @@ export default class FastSync extends Plugin {
       hasMigration = true
     }
 
+    // 5. 处理日志设置迁移 (Migration for log setting)
+    if (data && typeof data.logEnabled === "boolean") {
+      this.settings.logEnabled = data.logEnabled ? "console" : "off"
+      hasMigration = true
+    }
+
     if (hasMigration) {
       await this.saveSettings()
     }
@@ -704,7 +719,7 @@ export default class FastSync extends Plugin {
       this.updateStatusBar("")
     }
 
-    setLogEnabled(this.settings.logEnabled)
+    setLogEnabled(this.settings.logEnabled || "off")
   }
 
   /**

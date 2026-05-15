@@ -8,6 +8,7 @@ import { RuleEditorModal } from "./views/rule-editor-modal";
 import { ConfirmModal } from "./views/confirm-modal";
 import { RuleEditor } from "./views/rule-editor";
 import { PathSuggestOptions } from "./views/path-suggest";
+import { DebugLogModal } from "./views/debug-log-modal";
 import { $ } from "./i18n/lang";
 import FastSync from "./main";
 
@@ -17,8 +18,8 @@ export interface PluginSettings {
   syncEnabled: boolean
   /** 是否开启插件配置项同步 */
   configSyncEnabled: boolean
-  /** 是否开启日志记录 */
-  logEnabled: boolean
+  /** 日志记录级别 ("off", "console", "internal") */
+  logEnabled: "off" | "console" | "internal"
   /** API 基础地址 */
   api: string
   /** API 访问令牌 */
@@ -105,7 +106,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   // 是否自动上传
   syncEnabled: true,
   configSyncEnabled: false,
-  logEnabled: false,
+  logEnabled: "off",
   // API 网关地址
   api: "",
   // API 令牌
@@ -759,13 +760,27 @@ export class SettingTab extends PluginSettingTab {
   }
 
   private renderDebugSettings(set: HTMLElement) {
-    new Setting(set).setName($("setting.support.log")).setClass("fns-setting-item-checkbox").addToggle((toggle) =>
-      toggle.setValue(this.plugin.settings.logEnabled).onChange(async (value) => {
-        this.plugin.settings.logEnabled = value
-        await this.plugin.saveSettings()
-      }),
+    new Setting(set).setName($("setting.support.log")).addDropdown((dropdown) =>
+      dropdown
+        .addOption("off", $("setting.support.log_off"))
+        .addOption("console", $("setting.support.log_console"))
+        .addOption("internal", $("setting.support.log_internal"))
+        .setValue(this.plugin.settings.logEnabled || "off")
+        .onChange(async (value: "off" | "console" | "internal") => {
+          this.plugin.settings.logEnabled = value
+          await this.plugin.saveSettings()
+          this.display() // 重新渲染以更新按钮显示状态
+        }),
     )
     this.setDescWithBreaks(set.lastElementChild as HTMLElement, $("setting.support.log_desc"))
+
+    if (this.plugin.settings.logEnabled === "internal") {
+      new Setting(set).setName($("setting.support.log_view")).addButton((btn) =>
+        btn.setButtonText($("ui.log.view_log")).onClick(() => {
+          new DebugLogModal(this.app).open()
+        }),
+      )
+    }
 
     new Setting(set).setName($("setting.debug.network_library")).addDropdown((dropdown) =>
       dropdown

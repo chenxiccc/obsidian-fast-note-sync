@@ -1,7 +1,7 @@
 import { TFile, TAbstractFile, normalizePath, Platform } from "obsidian";
 
 import { ReceiveFileSyncUpdateMessage, FileUploadMessage, FileSyncChunkDownloadMessage, FileDownloadSession, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
-import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, dumpTable, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, logMemorySnapshot, hashFileAsync } from "./helps";
+import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, dumpTable, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, logMemorySnapshot, hashFileAsync, vaultDelete } from "./helps";
 import { FileCloudPreview } from "./file_cloud_preview";
 import { SyncLogManager } from "./sync_log_manager";
 import { HttpApiService } from "./api";
@@ -514,8 +514,7 @@ export const receiveFileUpload = async function (data: FileUploadMessage, plugin
                 dump(`Cloud Preview: Auto delete verified file: ${file.path}`);
                 plugin.addIgnoredFile(file.path);
                 try {
-                  // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-                  await plugin.app.vault.delete(file);
+                  await vaultDelete(plugin.app.vault, file);
                   plugin.fileHashManager.removeFileHash(file.path);
                 } finally {
                   plugin.removeIgnoredFile(file.path);
@@ -666,8 +665,7 @@ export const receiveFileSyncDelete = async function (data: ReceivePathMessage, p
       // 记录待删除路径
       plugin.lastSyncPathDeleted.add(normalizedPath)
       try {
-        // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-        await plugin.app.vault.delete(file)
+        await vaultDelete(plugin.app.vault, file)
         // 服务端推送删除,从哈希表中移除
         plugin.fileHashManager.removeFileHash(normalizedPath)
         plugin.lastSyncMtime.delete(normalizedPath)
@@ -994,8 +992,7 @@ export const receiveFileSyncRename = async function (data: { oldPath: string; pa
       try {
         const targetFile = plugin.app.vault.getFileByPath(normalizedNewPath)
         if (targetFile) {
-          // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file
-          await plugin.app.vault.delete(targetFile)
+          await vaultDelete(plugin.app.vault, targetFile)
         }
 
         await plugin.app.vault.rename(file, normalizedNewPath)

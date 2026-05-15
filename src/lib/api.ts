@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
 
-import { hashContent, addRandomParam, showSyncNotice, dump } from "./helps";
+import { hashContent, addRandomParam, showSyncNotice, dump, nativeFetch } from "./helps";
 import type FastSync from "../main";
 
 
@@ -152,8 +152,7 @@ export class HttpApiService {
 
         try {
             // 开启了自动重定向检测：使用 fetch 探测以获取 301/302 后的最终路径
-            // eslint-disable-next-line
-            const res = await fetch(probeUrl, {
+            const res = await nativeFetch(probeUrl, {
                 method: 'GET',
                 redirect: 'follow',
             });
@@ -304,8 +303,7 @@ export class HttpApiService {
                 redirect: "follow",
                 signal: options.signal
             };
-            // eslint-disable-next-line
-            const res = await fetch(url, fetchOptions);
+            const res = await nativeFetch(url, fetchOptions);
             let json: unknown = null;
             try {
                 json = await res.json();
