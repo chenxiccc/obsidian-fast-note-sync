@@ -24,6 +24,7 @@
     "@typescript-eslint/parser": "^8.59.2",
     "esbuild": "^0.24.2",
     "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.3.0",
     "npm-run-all2": "^8.0.4",
     "obsidian": "^1.12.3",
     "sass": "^1.99.0",
@@ -39,5 +40,5 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
-  "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
 }
