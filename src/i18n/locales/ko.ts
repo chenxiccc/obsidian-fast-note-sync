@@ -151,7 +151,7 @@ export default {
   "setting.support.range_3m": "3개월 이내",
   "setting.support.range_all": "전체 기간",
   "setting.support.empty": "지원 기록이 없습니다",
-  "setting.support.thanks": "Fast Note Sync에 대한 여러분의 지원에 감사드립니다. 이 목록은 수시로 업데이트되며, 댓글에는 <b>추천 정보</b> 또는 <b>문제 ID</b>를 남겨주세요. 예: #1234 (빠른 지원 제공을 위해 참고해 주세요.)",
+  "setting.support.thanks": "Fast Note Sync에 대한 여러분의 지원에 감사드립니다. 이 목록은 수시로 업데이트됩니다.<br />의견을 남기실 때, 본문에 <b>추천 사항</b> 또는 <b>피드백 문제 ID</b>를 추가해 주시면(예: #1234), 신속한 지원을 받을 수 있습니다.",
   "setting.support.loading": "로딩 중...",
   "setting.support.log": "로그 기록",
   "setting.support.log_desc": "로그 출력 방식을 선택하세요. 활성화 후 모바일에서 로그를 쉽게 확인하려면 '플러그인 내부'를 선택하는 것을 권장합니다.",

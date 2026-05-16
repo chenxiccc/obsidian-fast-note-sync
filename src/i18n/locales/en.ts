@@ -151,7 +151,7 @@ export default {
   "setting.support.range_3m": "Within 3 months",
   "setting.support.range_all": "All time",
   "setting.support.empty": "No support records yet",
-  "setting.support.thanks": "Thank you for supporting Fast Note Sync. This list is updated periodically. Comments may include <b>recommendations</b> or <b>issue IDs</b>, such as #1234, to help us assist you faster.",
+  "setting.support.thanks": "Thank you for your support of Fast Note Sync. This list will be updated periodically.<br />In addition to leaving a message, you can also include <b>recommendation details</b> or <b>issue IDs for feedback</b> in your message, such as #1234, to help us assist you more quickly.",
   "setting.support.loading": "Loading...",
   "setting.support.log": "Logging",
   "setting.support.log_desc": "Select the log output method. Once enabled, it is recommended to select 'Internal to Plugin' on mobile for easier log viewing.",

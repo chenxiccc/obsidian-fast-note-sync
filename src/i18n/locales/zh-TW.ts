@@ -151,7 +151,7 @@ export default {
   "setting.support.range_3m": "三個月以內",
   "setting.support.range_all": "全部至今",
   "setting.support.empty": "暫無支持記錄",
-  "setting.support.thanks": "感謝大家對 Fast Note Sync 的支持,本列表會不定期更新, 留言允許 <b>推薦資訊</b> 或 <b>回饋問題ID</b>，例如：#1234 方便快速獲取幫助",
+  "setting.support.thanks": "感謝大家對 Fast Note Sync 的支持,本列表會不定期更新。<br />除留言外, 還可在留言內容中添加 <b>推薦資訊</b> 或 <b>回報問題ID</b>，例如：#1234，方便快速取得協助。",
   "setting.support.loading": "載入中...",
   "setting.support.log": "日誌記錄",
   "setting.support.log_desc": "選擇日誌輸出方式。開啟後，建議在手機端選擇“插件內部”以方便查看日誌。",

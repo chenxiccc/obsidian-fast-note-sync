@@ -151,7 +151,7 @@ export default {
   "setting.support.range_3m": "3ヶ月以内",
   "setting.support.range_all": "全期間",
   "setting.support.empty": "サポート記録はありません",
-  "setting.support.thanks": "Fast Note Sync へのご支援ありがとうございます。本リストは不定期で更新されます。コメントには <b>推奨情報</b> または <b>問題ID</b> をご記入ください（例：#1234）。これにより、迅速なサポートが可能になります。",
+  "setting.support.thanks": "Fast Note Sync へのご支援ありがとうございます。このリストは不定期で更新されます。<br />コメントの他に、メッセージ本文に <b>推奨情報</b> や <b>Issue ID</b> を追記していただくと（例：#1234）、迅速なサポートが可能です。",
   "setting.support.loading": "読み込み中...",
   "setting.support.log": "ログ記録",
   "setting.support.log_desc": "ログ出力方法を選択します。有効化後、スマートフォンでは「プラグイン内」を選択することを推奨します。",
