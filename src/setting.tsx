@@ -556,14 +556,14 @@ export class SettingTab extends PluginSettingTab {
           arch: typeof process !== "undefined" ? process.arch : "unknown",
           userAgent: "Obsidian/" + ((this.app as unknown as { version: string }).version || "unknown"),
           versions:
-            typeof process !== "undefined"
-              ? {
+              typeof process !== "undefined" && process.versions
+                ? {
                 node: process.versions.node,
                 electron: process.versions.electron,
                 chrome: process.versions.chrome,
                 v8: process.versions.v8,
-              }
-              : {},
+                }
+                : {},
           capacitor: (window as unknown as { Capacitor: { getPlatform(): string; isNative: boolean } }).Capacitor
             ? {
               platform: (window as unknown as { Capacitor: { getPlatform(): string; isNative: boolean } }).Capacitor.getPlatform(),
@@ -589,15 +589,23 @@ export class SettingTab extends PluginSettingTab {
     const debugButton = debugDiv.createEl("button")
     debugButton.setText($("setting.support.debug_copy"))
     debugButton.onclick = async () => {
-      await navigator.clipboard.writeText(this.getDebugInfo())
-      showSyncNotice($("setting.support.debug_desc"))
+        try {
+            await navigator.clipboard.writeText(this.getDebugInfo())
+        } catch (e) {
+            console.error("[fast-note-sync] copy debug info failed:", e)
+        }
+        showSyncNotice($("setting.support.debug_desc"))
     }
 
     if (isHomePage) {
       const issueButton = debugDiv.createEl("button")
       issueButton.setText($("setting.support.issue"))
       issueButton.onclick = async () => {
-        await navigator.clipboard.writeText(this.getDebugInfo())
+        try {
+            await navigator.clipboard.writeText(this.getDebugInfo())
+        } catch (e) {
+            console.error("[fast-note-sync] copy debug info failed:", e)
+        }
         new ConfirmModal(
           this.app,
           $("ui.title.notice"),
