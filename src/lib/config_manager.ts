@@ -1,6 +1,6 @@
 import { normalizePath } from "obsidian";
 
-import { dump, getFileName, getDirNameOrEmpty, configAddPathExcluded, isPathInConfigSyncDirs, getConfigSyncCustomDirs, isInWhitelist } from "./helps";
+import { dump, getFileName, getDirNameOrEmpty, configAddPathExcluded, isPathInConfigSyncDirs, getConfigSyncCustomDirs, isInWhitelist, getPluginDir } from "./helps";
 import { CONFIG_PLUGIN_EXTS_TO_WATCH, CONFIG_ROOT_FILES_EXCLUDE, CONFIG_THEME_EXTS_TO_WATCH, configModify, configDelete, configAllPaths } from "./config_operator";
 import type FastSync from "../main";
 
@@ -25,6 +25,9 @@ export class ConfigManager {
     this.pluginDir = this.pluginRealDir
 
     configAddPathExcluded(`${configDir}/plugins/hot-reload/`, this.plugin)
+    // 自动将本插件的 data.json 加入内置同步排除列表，防止同步敏感数据及配置冲突
+    // Automatically add this plugin's own data.json to built-in sync exclusion to prevent syncing sensitive data and config conflicts
+    configAddPathExcluded(`${getPluginDir(this.plugin)}/data.json`, this.plugin)
 
     void this.loadEnabledPlugins()
     void this.initializeFileStates()

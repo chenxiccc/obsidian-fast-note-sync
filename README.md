@@ -18,9 +18,9 @@ For users in Mainland China, it is recommended to use the Tencent `cnb.cool` mir
 
 
 <p align="center">
-  <strong>Fast, Stable, Efficient, and Arbitrarily Deployable Obsidian Note Sync & Backup Plugin</strong>
+  <strong>Fast multi-device sync, automatic backup, trackable version history, and shareable collaboration note sync plugin for Obsidian</strong>
   <br>
-  <em>Privately deployable, focused on providing a non-intrusive, buttery-smooth, multi-device real-time sync & backup plugin for Obsidian users, supporting platforms such as Mac, Windows, Android, iOS, and offering multi-language support.</em>
+  <em>Sync your notes in real-time across multiple devices (PC, mobile, web) anytime, anywhere. One-click generation of sharing links to share with friends, easily trace modification history or restore trash bin contents; also supports backup, mirroring, and Git synchronization. With the REST/MCP services of Fast Note Sync Service, you can quickly build your own personal knowledge base.</em>
 </p>
 
 <p align="center">
@@ -35,42 +35,40 @@ For users in Mainland China, it is recommended to use the Tencent `cnb.cool` mir
 ## ✨ Features
 
 - 🚀 **Minimalist Configuration**:
-    - No complicated settings required, just paste the remote service configuration to start using it out of the box.
-    - Also supports one-click import on the desktop client for automatic authorization.
+    - No tedious setup required, just paste the remote service configuration to start using it out of the box.
+    - Can also use one-click import on the desktop app to automatically complete authorization.
 - 📗 **Real-time Note Sync**:
-    - Automatically monitors and syncs all creations, updates, and deletions of notes within the Vault.
+    - Automatically monitors and syncs the creation, update, and deletion of all notes inside the Vault (repository).
 - 🖼️ **Full Attachment Support**:
-    - Real-time sync of various non-setting files such as images, videos, and audio.
-    > ⚠️ **Note**: Requires v1.0+, Server v0.9+. Please control the size of attachment files; large files may cause sync latency.
+    - Syncs images, videos, audio, and all other non-configuration files in real-time.
+    > ⚠️ **Note**: Requires v1.0+, Server v0.9+. Please manage attachment file sizes; large files may cause synchronization delays.
 - ⚙️ **Configuration Sync**:
-    - Provides configuration sync functionality, supporting config synchronization across multiple devices, saying goodbye to the pain of manually copying configuration files to multiple devices.
+    - Provides configuration sync, supporting config synchronization across multiple devices. Say goodbye to the pain of manually copying configuration files to multiple devices.
     > ⚠️ **Note**: Requires v1.4+, Server v1.0+. Currently in the testing phase, please use with caution.
 - 🛂 **Sync Exclusions & Whitelist**:
-    - Provides sync exclusion and whitelist features, allowing you to specify your own sync strategy.
+    - Provides sync exclusion and whitelist functions, allowing you to customize your own sync strategies.
 - 🔄 **Multi-device Sync**:
     - Supports Mac, Windows, Android, iOS, and other platforms.
 - 📝 **Note History**:
-    - Provides note history functionality, allowing you to view detailed historical modification records of notes.
+    - Provides note history functionality, letting you view detailed historical modification records of your notes.
     - You can restore notes to historical versions.
 - 🛡️ **Offline Note Editing Auto-Merge**:
     - Automatically merges note modifications made on offline devices when reconnecting to the server, avoiding data loss caused by keeping only the latest update.
 - 🚫 **Offline Deletion Sync & Completion**:
     - Deletions of notes, attachments, and configurations during offline periods will be automatically synced to the server or completed from the server upon the next connection.
 - 🔍 **Version Detection**:
-    - Provides version detection functionality, allowing you to quickly get the latest version information of both the plugin and the server for fast upgrading.
+    - Provides version detection functionality, allowing you to quickly get the latest version info of the plugin and the server for easy upgrading.
 - ☁️ **Cloud Preview of Attachments**:
-    - Provides online preview functionality for attachments, which do not need to be synced to the local device, thus saving local storage space.
-    > Used in conjunction with the plugin's exclusion settings, you can directly use third-party repositories (such as WebDAV) for certain types of attachments without uploading via the server.
+    - Provides online attachment preview, meaning attachments do not need to be synced to the local device, thereby saving local storage space.
+    > Combined with the plugin's exclusion settings, you can directly use a third-party repository (like WebDav) for certain types of attachments without uploading via the server.
 - 🗒️ **Sync Logs**:
-    - Provides sync log functionality for viewing detailed information for each synchronization.
+    - Provides sync log functionality, making it easy to view detailed information for each synchronization.
+- **Cloud Backup**: Provides cloud backup functionality to protect your note data from being lost.
 
 ## 🗺️ Roadmap
 
 We are continuously improving, and the following are future development plans:
-- [ ] **Note Sharing**: Generate sharing links for your cloud notes, making it easy to share your achievements with others.
 - [ ] **End-to-End Encryption**: Provide end-to-end encryption to ensure your note data is safe wherever it is stored.
-- [ ] **Cloud Backup**: Provide cloud backup functionality to protect your note data from loss.
-
 - [ ] **AI Notes**: Explore innovative ways to use AI with notes, awaiting your valuable suggestions.
 
 > **If you have improvement suggestions or new ideas, feel free to share them with us by submitting an issue — we will carefully evaluate and adopt suitable suggestions.**
@@ -92,14 +90,14 @@ We are continuously improving, and the following are future development plans:
 
 **Step 1: Get the Plugin**
 
-* **Store Search:** Open Obsidian **Settings** > **Community Plugins** > **Browse**, search for `Fast Note Sync` to install. *(Note: If not listed, please choose manual installation)*
-* **Manual Download:** Visit [GitHub Releases](https://github.com/haierkeys/obsidian-fast-note-sync/releases) to download `main.js`, `styles.css`, `manifest.json`, and extract them into the `.obsidian/plugins/fast-note-sync` folder.
+* **Store Search:** Open Obsidian **Settings** > **Community Plugins** > **Browse**, search for `Fast Note Sync` to install. *(Note: If not listed in the store, please choose manual installation)*
+* **Manual Download:** Download `main.js`, `styles.css`, `manifest.json` from the [GitHub Releases Page](https://github.com/haierkeys/obsidian-fast-note-sync/releases) and place them in the `.obsidian/plugins/fast-note-sync` folder.
 
 **Step 2: Authorize Sync**
 
-1. Access the Web interface of your **[Fast Note Sync Service](https://github.com/haierkeys/fast-note-sync-service)**.
+1. Access the Web interface of your deployed **[Fast Note Sync Service](https://github.com/haierkeys/fast-note-sync-service)**.
 2. Select **"Note Vaults"** from the left navigation bar.
-3. Click **"One-click Authorization for Obsidian"**. The system will automatically wake up Obsidian and complete the authorization process. Alternatively, you can manually copy the authorization info into the plugin.
+3. Click **"One-click Authorization for Obsidian"**. The system will automatically wake up Obsidian and complete the transfer of authorization information. Of course, you can also manually copy the authorization information into the plugin.
 
 ## 📦 Server Deployment
 
