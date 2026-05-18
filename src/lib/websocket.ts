@@ -426,6 +426,12 @@ export class WebSocketClient {
 
   //ddd
   public checkReConnect() {
+    // 后台暂停期间不重连，避免无意义 health check 和退避计数增长
+    // Skip reconnect when watch is disabled, avoids pointless health checks and backoff inflation in background
+    if (!this.plugin.isWatchEnabled) {
+      dump("Watch disabled, skipping reconnect")
+      return
+    }
     window.clearTimeout(this.checkReConnectTimeout)
     if (this.timeConnect > 15) {
       // Max attempts hardcoded or use constant

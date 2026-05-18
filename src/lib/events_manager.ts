@@ -98,6 +98,9 @@ export class EventManager {
       }
       dump("Obsidian Mobile Plugin Focus (Enable)")
       this.plugin.enableWatch()
+      // 回到前台立即重置退避计数器并重连
+      // Reset backoff counter and reconnect immediately when returning to foreground
+      this.plugin.websocket?.triggerReconnect()
     }
   }
 
@@ -130,6 +133,9 @@ export class EventManager {
         // 如果未开启自动暂停，确保恢复时监听也是开启的（增强鲁棒性）
         this.plugin.enableWatch()
       }
+      // 恢复可见时立即重置退避计数器并重连
+      // Reset backoff counter and reconnect immediately when becoming visible again
+      this.plugin.websocket?.triggerReconnect()
       // 恢复前台时刷新分享状态（覆盖短暂后台期间其他设备变更分享的场景）
       // Refresh share state on foreground resume (covers share changes by other devices during brief background)
       void this.plugin.shareIndicatorManager?.syncWithServer()
