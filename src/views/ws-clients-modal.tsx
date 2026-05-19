@@ -6,6 +6,7 @@ import type FastSync from "../main";
 import { $ } from "../i18n/lang";
 import { LucideIcon } from "./note-history/lucide-icon";
 import { WSClient } from "../lib/api";
+import { dumpError } from "../lib/helps";
 
 export class WSClientsModal extends Modal {
     private root: Root | null = null;
@@ -62,7 +63,7 @@ const WSClientsView = ({ plugin }: { plugin: FastSync }) => {
             if (!isMounted.current) return;
             setClients(data || []);
         } catch (err) {
-            console.error("Failed to load WS clients:", err);
+            dumpError("Failed to load WS clients:", err);
         } finally {
             if (isMounted.current) {
                 setIsLoading(false);

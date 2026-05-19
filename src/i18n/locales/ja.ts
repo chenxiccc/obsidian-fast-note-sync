@@ -418,4 +418,6 @@ export default {
   "ui.system.websocketClients": "オンラインクライアント",
   "ui.system.wsNoClients": "オンラインクライアントはありません",
   "ui.system.wsStartTime": "接続時刻",
+  "ui.status.case_conflict.title": "⚠️ ${type}同期の大文字小文字の競合！\nサーバー期待パス: ${expectedPath}\nローカルに実在: ${actualPath}\nOSが大文字小文字を区別しないため、手動で名前を変更して一致させてください。",
+  "ui.status.case_conflict.log": "大文字小文字の競合！ローカルに実在：${actualPath}",
 };

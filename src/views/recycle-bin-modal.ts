@@ -1,7 +1,7 @@
 import { App, Modal, setIcon, ButtonComponent } from "obsidian";
 
 import { ConfirmModal } from "./confirm-modal";
-import { formatFileSize, showSyncNotice } from "../lib/helps";
+import { formatFileSize, showSyncNotice, dumpError } from "../lib/helps";
 import { HttpApiService } from "../lib/api";
 import type FastSync from "../main";
 import { $ } from "../i18n/lang";
@@ -381,7 +381,7 @@ export class RecycleBinModal extends Modal {
                 return;
             }
             showSyncNotice($("ui.history.load_failed"));
-            console.error("Failed to load recycle bin data", e);
+            dumpError("Failed to load recycle bin data", e);
         } finally {
             if (!signal.aborted) {
                 this.loading = false;

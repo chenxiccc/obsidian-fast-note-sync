@@ -4,7 +4,7 @@ import * as React from "react";
 import { unzipSync } from "fflate";
 
 import type FastSync from "../main";
-import { dump, getPluginDir } from "../lib/helps";
+import { dump, dumpError, getPluginDir } from "../lib/helps";
 import { showSyncNotice } from "../lib/helps";
 import { $ } from "../i18n/lang";
 import { LucideIcon } from "./note-history/lucide-icon";
@@ -147,7 +147,7 @@ const AboutView = ({ plugin, type, closeModal }: { plugin: FastSync; type: 'plug
             }, 120000);
 
         } catch (e) {
-            console.error("Upgrade process error:", e);
+            dumpError("Upgrade process error:", e);
             showSyncNotice($("ui.version.upgrade_fail"));
             setIsUpgrading(false);
             void plugin.websocket.register();
@@ -266,8 +266,7 @@ const AboutView = ({ plugin, type, closeModal }: { plugin: FastSync; type: 'plug
             closeModal();
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
-            dump(`Upgrade failed: ${errorMsg}`, e);
-            console.error("Plugin upgrade error:", e);
+            dumpError(`Plugin upgrade error: ${errorMsg}`, e);
             showSyncNotice($("ui.version.upgrade_fail") + ": " + errorMsg);
         } finally {
             setIsUpgrading(false);

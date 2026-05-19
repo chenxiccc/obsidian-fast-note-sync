@@ -1,6 +1,6 @@
 import { normalizePath, App } from "obsidian";
 
-import { hashContent, dump, configIsPathExcluded, getSafeCtime, isPathInConfigSyncDirs, showSyncNotice, isInWhitelist, hashFileAsync, checkAndNotifyCaseConflict } from "./helps";
+import { hashContent, dump, dumpError, configIsPathExcluded, getSafeCtime, isPathInConfigSyncDirs, showSyncNotice, isInWhitelist, hashFileAsync, checkAndNotifyCaseConflict } from "./helps";
 import { SyncLogManager } from "./sync_log_manager";
 import { ReceiveMessage, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
 import type FastSync from "../main";
@@ -60,7 +60,7 @@ export const configModify = async function (path: string, plugin: FastSync, even
                 }
             }
         } catch (error) {
-            console.error("读取配置文件出错:", error)
+            dumpError("读取配置文件出错:", error)
         }
     }
 
@@ -174,7 +174,7 @@ export const receiveConfigSyncModify = async function (data: ReceiveMessage, plu
         const filePath = normalizePath(data.path)
         await plugin.app.vault.adapter.write(filePath, data.content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
     } catch (e) {
-        console.error("[writeConfigFile] error:", e)
+        dumpError("[writeConfigFile] error:", e)
         if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'ConfigModify')) {
             SyncLogManager.getInstance().addLog('receive', 'ConfigModify', e instanceof Error ? e.message : String(e), 'error', data.path);
         }
@@ -252,7 +252,7 @@ export const receiveConfigUpload = async function (data: ReceivePathMessage, plu
             }
         }
     } catch (error) {
-        console.error("读取配置文件出错:", error);
+        dumpError("读取配置文件出错:", error);
         return
     }
 
@@ -302,7 +302,7 @@ export const receiveConfigSyncMtime = async function (data: ReceiveMtimeMessage,
             await plugin.app.vault.adapter.writeBinary(filePath, content, { ...(data.ctime > 0 && { ctime: data.ctime }), ...(data.mtime > 0 && { mtime: data.mtime }) })
         }
     } catch (e) {
-        console.error("[updateConfigFileTime] error:", e)
+        dumpError("[updateConfigFileTime] error:", e)
         if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'ConfigMtime')) {
             SyncLogManager.getInstance().addLog('receive', 'ConfigMtime', e instanceof Error ? e.message : String(e), 'error', data.path);
         }
@@ -343,7 +343,7 @@ export const receiveConfigSyncDelete = async function (data: { path: string, las
             }
         }
     } catch (e) {
-        console.error("[receiveConfigSyncDelete] error:", e)
+        dumpError("[receiveConfigSyncDelete] error:", e)
         SyncLogManager.getInstance().addLog('receive', 'ConfigDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
     }
 
@@ -663,7 +663,7 @@ export const configReload = async function (path: string, plugin: FastSync, even
                         }
                     }
                 } catch (e) {
-                    console.error(`[Sync] 处理 ${p} 失败:`, e);
+                    dumpError(`[Sync] 处理 ${p} 失败:`, e);
                 }
             } else if (p === `${configDir}/community-plugins.json`) {
                 try {

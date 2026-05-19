@@ -1,7 +1,7 @@
 import { TFile, TAbstractFile, normalizePath, Platform } from "obsidian";
 
 import { ReceiveFileSyncUpdateMessage, FileUploadMessage, FileSyncChunkDownloadMessage, FileDownloadSession, ReceiveMtimeMessage, ReceivePathMessage, SyncEndData } from "./types";
-import { hashContent, hashArrayBuffer, getPluginDir, dump, sleep, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, checkAndNotifyCaseConflict, logMemorySnapshot, hashFileAsync, vaultDelete } from "./helps";
+import { hashContent, hashArrayBuffer, getPluginDir, dump, dumpError, sleep, isPathExcluded, getSafeCtime, isLargeBinarySyncRisk, describeBinarySyncLimit, showSyncNotice, checkAndNotifyCaseConflict, logMemorySnapshot, hashFileAsync, vaultDelete } from "./helps";
 import { FileCloudPreview } from "./file_cloud_preview";
 import { SyncLogManager } from "./sync_log_manager";
 import { HttpApiService } from "./api";
@@ -682,7 +682,7 @@ export const receiveFileSyncDelete = async function (data: ReceivePathMessage, p
       }
     }
   }, { maxRetries: 5, retryInterval: 100 }).catch(e => {
-    dump(`Error in receiveFileSyncDelete: ${normalizedPath}`, e);
+    dumpError(`[FastSync] Failed to receiveFileSyncDelete: ${normalizedPath}`, e);
     SyncLogManager.getInstance().addLog('receive', 'FileDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
   });
 
@@ -746,7 +746,7 @@ export const receiveFileSyncMtime = async function (data: ReceiveMtimeMessage, p
       }
     }
   }, { maxRetries: 5, retryInterval: 100 }).catch(e => {
-    dump(`Error in receiveFileSyncMtime: ${normalizedPath}`, e);
+    dumpError(`[FastSync] Failed to receiveFileSyncMtime: ${normalizedPath}`, e);
     if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'FileMtime')) {
       SyncLogManager.getInstance().addLog('receive', 'FileMtime', e instanceof Error ? e.message : String(e), 'error', data.path);
     }
@@ -1060,7 +1060,7 @@ export const receiveFileSyncRename = async function (data: { oldPath: string; pa
       }
     }
   }, { maxRetries: 10, retryInterval: 100 }).catch(e => {
-    dump(`Error in receiveFileSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+    dumpError(`[FastSync] Failed to receiveFileSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
     if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'FileRename')) {
       SyncLogManager.getInstance().addLog('receive', 'FileRename', e instanceof Error ? e.message : String(e), 'error', data.path);
     }

@@ -1,6 +1,6 @@
 import { normalizePath } from "obsidian";
 
-import { dump, getFileName, getDirNameOrEmpty, configAddPathExcluded, isPathInConfigSyncDirs, getConfigSyncCustomDirs, isInWhitelist, getPluginDir } from "./helps";
+import { dump, dumpError, getFileName, getDirNameOrEmpty, configAddPathExcluded, isPathInConfigSyncDirs, getConfigSyncCustomDirs, isInWhitelist, getPluginDir } from "./helps";
 import { CONFIG_PLUGIN_EXTS_TO_WATCH, CONFIG_ROOT_FILES_EXCLUDE, CONFIG_THEME_EXTS_TO_WATCH, configModify, configDelete, configAllPaths } from "./config_operator";
 import type FastSync from "../main";
 
@@ -124,7 +124,7 @@ export class ConfigManager {
                 dump(`[FastNoteSync] Local manifest updated to ${this.plugin.manifest.version}`)
               }
             } catch (e) {
-              console.error("[FastNoteSync] Failed to read local manifest:", e)
+              dumpError("[FastNoteSync] Failed to read local manifest:", e)
             }
           })();
         }, 500) // 延迟读取确保写入完成

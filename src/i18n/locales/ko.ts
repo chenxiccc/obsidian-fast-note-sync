@@ -418,4 +418,6 @@ export default {
   "ui.system.websocketClients": "온라인 클라이언트",
   "ui.system.wsNoClients": "현재 온라인 클라이언트가 없습니다",
   "ui.system.wsStartTime": "연결 시간",
+  "ui.status.case_conflict.title": "⚠️ ${type} 동기화 대소문자 충돌!\n서버 예상 경로: ${expectedPath}\n로컬 실제 존재: ${actualPath}\nOS가 대소문자를 구분하지 않으므로 수동으로 이름을 변경하여 일치시키십시오.",
+  "ui.status.case_conflict.log": "대소문자 충돌! 로컬 실제 존재: ${actualPath}",
 };

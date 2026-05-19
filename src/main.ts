@@ -1,6 +1,7 @@
 import { Plugin, Platform, addIcon } from "obsidian";
 
-import { dump, setLogEnabled, isPathMatch, parseRules, stringifyRules, getPluginDir, showSyncNotice, loadApiToken, saveApiToken, loadApiUrl, saveApiUrl, loadVault, saveVault, loadAutoRedirect, saveAutoRedirect } from "./lib/helps";
+import { dump, dumpError, checkAndNotifyCaseConflict, setLogEnabled, isPathMatch, parseRules, stringifyRules, getPluginDir, showSyncNotice, loadApiToken, saveApiToken, loadApiUrl, saveApiUrl, loadVault, saveVault, loadAutoRedirect, saveAutoRedirect } from "./lib/helps";
+import { DebugLogManager } from "./lib/debug_log_manager";
 import { clearAllTempChunks, abortAllFileOperations, resetFileOperations } from "./lib/file_operator";
 import { SettingTab, PluginSettings, DEFAULT_SETTINGS } from "./setting";
 import { SyncLogView, SYNC_LOG_VIEW_TYPE } from "./views/sync-log-view";
@@ -274,6 +275,18 @@ export default class FastSync extends Plugin {
   }
 
   async onload() {
+    (window as Window & {
+      FastSyncDebug?: {
+        dumpError: typeof dumpError;
+        checkAndNotifyCaseConflict: typeof checkAndNotifyCaseConflict;
+        DebugLogManager: typeof DebugLogManager;
+      };
+    }).FastSyncDebug = {
+      dumpError,
+      checkAndNotifyCaseConflict,
+      DebugLogManager
+    };
+
     // 注册自定义颜色图标 / Register custom colored icons
     resetFileOperations()
     const colors = {
@@ -705,7 +718,7 @@ export default class FastSync extends Plugin {
           }, 2000)
         }
       }).catch(e => {
-        console.error("Fast Note Sync: Background API probe failed", e)
+        dumpError("Fast Note Sync: Background API probe failed", e)
       })
       this.ignoredFiles = new Set()
       this.ignoredConfigFiles = new Set()

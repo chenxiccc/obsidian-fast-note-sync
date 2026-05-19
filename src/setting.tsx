@@ -2,7 +2,7 @@ import { App, PluginSettingTab, Setting, Platform, SearchComponent, MarkdownRend
 import { createRoot, Root } from "react-dom/client";
 
 import { resetSettingSyncTime, rebuildAllHashes, clearAllHashes } from "./lib/operator";
-import { parseRules, SyncRule, getPluginDir, debounce, showSyncNotice } from "./lib/helps";
+import { parseRules, SyncRule, getPluginDir, debounce, showSyncNotice, dumpError } from "./lib/helps";
 import { SettingsView, SupportView } from "./views/settings-view";
 import { RuleEditorModal } from "./views/rule-editor-modal";
 import { ConfirmModal } from "./views/confirm-modal";
@@ -693,7 +693,7 @@ export class SettingTab extends PluginSettingTab {
               }
               void this.plugin.websocket.SendMessage("SettingClear", {
                 vault: this.plugin.settings.vault,
-              }).catch(e => console.error(e))
+              }).catch(e => dumpError(e))
 
             // 备份需要保留的远端核心配置
             const backup = {

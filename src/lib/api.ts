@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
 
-import { hashContent, addRandomParam, showSyncNotice, dump, nativeFetch } from "./helps";
+import { hashContent, addRandomParam, showSyncNotice, dump, dumpError, nativeFetch } from "./helps";
 import { getLocale } from "../i18n/lang";
 import type FastSync from "../main";
 
@@ -197,7 +197,7 @@ export class HttpApiService {
             }
         } catch (e) {
             // 即使失败，也确保 runApi 有值（回退到探测的 base）
-            console.error("probeApiRedirect error/timeout:", e);
+            dumpError("probeApiRedirect error/timeout:", e);
             this.plugin.updateRuntimeApi(base);
             return false;
         } finally {
@@ -217,7 +217,7 @@ export class HttpApiService {
             });
             return status === 200 && this.isSuccess(json);
         } catch (e) {
-            console.error("adminUpgrade error:", e);
+            dumpError("adminUpgrade error:", e);
             return false;
         }
     }
@@ -237,7 +237,7 @@ export class HttpApiService {
             const res = json as ApiResponse<{ isAdmin: boolean }>;
             return status === 200 && res.data?.isAdmin === true;
         } catch (e) {
-            console.error("checkAdmin error:", e);
+            dumpError("checkAdmin error:", e);
             return false;
         }
     }
@@ -269,7 +269,7 @@ export class HttpApiService {
             }
             return null;
         } catch (e) {
-            console.error("downloadBinary error:", e);
+            dumpError("downloadBinary error:", e);
             return null;
         }
     }
@@ -448,7 +448,7 @@ export class HttpApiService {
 
             return true;
         } catch (e) {
-            console.error("restoreNoteVersion error:", e);
+            dumpError("restoreNoteVersion error:", e);
             showSyncNotice("恢复版本请求失败");
             return false;
         }
@@ -573,7 +573,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("restoreNote error:", e);
+            dumpError("restoreNote error:", e);
             showSyncNotice("恢复笔记失败");
             return false;
         }
@@ -603,7 +603,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("restoreFile error:", e);
+            dumpError("restoreFile error:", e);
             showSyncNotice("恢复文件失败");
             return false;
         }
@@ -632,7 +632,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("deleteFile error:", e);
+            dumpError("deleteFile error:", e);
             showSyncNotice("删除文件失败");
             return false;
         }
@@ -663,7 +663,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("clearRecycleBin error:", e);
+            dumpError("clearRecycleBin error:", e);
             showSyncNotice("请求失败，请检查网络");
             return false;
         }
@@ -693,7 +693,7 @@ export class HttpApiService {
             const res = json as ApiResponse<{ id: number, token: string, isPassword?: boolean, shortLink?: string, baseUrl?: string }>;
             return res.data;
         } catch (e) {
-            console.error("createShare error:", e);
+            dumpError("createShare error:", e);
             showSyncNotice("创建分享失败");
             return null;
         }
@@ -720,7 +720,7 @@ export class HttpApiService {
             const res = json as ApiResponse<{ id: number, token: string, isPassword?: boolean, shortLink?: string, baseUrl?: string }>;
             return res.data;
         } catch (e) {
-            console.error("getShare error:", e);
+            dumpError("getShare error:", e);
             return null;
         }
     }
@@ -749,7 +749,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("updateSharePassword error:", e);
+            dumpError("updateSharePassword error:", e);
             showSyncNotice("设置密码失败");
             return false;
         }
@@ -783,7 +783,7 @@ export class HttpApiService {
             const res = json as ApiResponse<string>;
             return res.data || null;
         } catch (e) {
-            console.error("createShortLink error:", e);
+            dumpError("createShortLink error:", e);
             showSyncNotice("生成短链接失败");
             return null;
         }
@@ -812,7 +812,7 @@ export class HttpApiService {
             }
             return true;
         } catch (e) {
-            console.error("cancelShare error:", e);
+            dumpError("cancelShare error:", e);
             showSyncNotice("取消分享失败");
             return false;
         }
@@ -833,7 +833,7 @@ export class HttpApiService {
             const res = json as ApiResponse<string[]>;
             return res.data || [];
         } catch (e) {
-            console.error("getSharePaths error:", e);
+            dumpError("getSharePaths error:", e);
             return null;
         }
     }
@@ -873,7 +873,7 @@ export class HttpApiService {
             const res = json as ApiResponse<WSClient[]>;
             return res.data || [];
         } catch (e) {
-            console.error("getWSClients error:", e);
+            dumpError("getWSClients error:", e);
             return [];
         }
     }

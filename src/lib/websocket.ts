@@ -1,6 +1,6 @@
 import { moment, Platform } from "obsidian";
 
-import { dump, isWsUrl, addRandomParam, isVersionNew, showSyncNotice, safeStringify } from "./helps";
+import { dump, dumpError, isWsUrl, addRandomParam, isVersionNew, showSyncNotice, safeStringify } from "./helps";
 import { handleFileChunkDownload, BINARY_PREFIX_FILE_SYNC, clearUploadQueue } from "./file_operator";
 import { receiveOperators, startupSync } from "./operator";
 import { SyncLogManager } from "./sync_log_manager";
@@ -129,7 +129,7 @@ export class WebSocketClient {
 
   public registerBinaryHandler(prefix: string, handler: (data: ArrayBuffer | Blob, plugin: FastSync) => void) {
     if (prefix.length !== 2) {
-      console.error("Binary handler prefix must be exactly 2 characters");
+      dumpError("Binary handler prefix must be exactly 2 characters");
       return;
     }
     this.binaryHandlers.set(prefix, handler);
@@ -425,7 +425,7 @@ export class WebSocketClient {
         ws.close(1000, "Cleanup");
       }
     } catch (e) {
-      console.error("Error closing WebSocket:", e);
+      dumpError("Error closing WebSocket:", e);
     }
   }
 

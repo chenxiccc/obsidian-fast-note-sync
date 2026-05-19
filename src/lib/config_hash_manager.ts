@@ -1,6 +1,6 @@
 import { normalizePath } from "obsidian";
 
-import { hashContentAsync, dump, configIsPathExcluded, getConfigSyncCustomDirs, showSyncNotice, hashFileAsync } from "./helps";
+import { hashContentAsync, dump, dumpError, configIsPathExcluded, getConfigSyncCustomDirs, showSyncNotice, hashFileAsync } from "./helps";
 import { configAllPaths } from "./config_operator";
 import type FastSync from "../main";
 
@@ -107,7 +107,7 @@ export class ConfigHashManager {
                             this.hashMap.set(path, { hash: contentHash, mtime: stat.mtime, size: stat.size });
                         }
                     } catch (error) {
-                        console.error("读取配置文件出错:", error);
+                        dumpError("读取配置文件出错:", error);
                     }
                 }
 

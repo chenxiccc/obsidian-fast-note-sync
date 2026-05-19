@@ -1,7 +1,7 @@
 import { TFolder, normalizePath } from "obsidian";
 
 import { SyncEndData, FolderSyncRenameMessage } from "./types";
-import { hashContent, dump, isPathExcluded, waitForFolderEmpty, vaultDelete, checkAndNotifyCaseConflict } from "./helps";
+import { hashContent, dump, dumpError, isPathExcluded, waitForFolderEmpty, vaultDelete, checkAndNotifyCaseConflict } from "./helps";
 import { SyncLogManager } from "./sync_log_manager";
 import type FastSync from "../main";
 
@@ -141,11 +141,10 @@ export const receiveFolderSyncModify = async function (data: { path: string, mti
             }
         }, { maxRetries: 5, retryInterval: 100 });
     } catch (e) {
-        console.error(`[FastSync] Failed to receiveFolderSyncModify: ${normalizedPath}`, e);
+        dumpError(`[FastSync] Failed to receiveFolderSyncModify: ${normalizedPath}`, e);
         if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'FolderModify')) {
             SyncLogManager.getInstance().addLog('receive', 'FolderModify', e instanceof Error ? e.message : String(e), 'error', data.path);
         }
-        dump(`Error in receiveFolderSyncModify: ${normalizedPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致
         // Update sync timestamp in real time, consistent with note side
@@ -190,9 +189,8 @@ export const receiveFolderSyncDelete = async function (data: { path: string, las
             }
         }, { maxRetries: 10, retryInterval: 200 });
     } catch (e) {
-        console.error(`[FastSync] Failed to receiveFolderSyncDelete: ${normalizedPath}`, e);
+        dumpError(`[FastSync] Failed to receiveFolderSyncDelete: ${normalizedPath}`, e);
         SyncLogManager.getInstance().addLog('receive', 'FolderDelete', e instanceof Error ? e.message : String(e), 'error', data.path);
-        dump(`Error in receiveFolderSyncDelete: ${normalizedPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致
         // Update sync timestamp in real time, consistent with note side
@@ -259,11 +257,10 @@ export const receiveFolderSyncRename = async function (data: FolderSyncRenameMes
             }
         }, { maxRetries: 10, retryInterval: 100 });
     } catch (e) {
-        console.error(`[FastSync] Failed to receiveFolderSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
+        dumpError(`[FastSync] Failed to receiveFolderSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e);
         if (!checkAndNotifyCaseConflict(e, data.path, plugin, 'FolderRename')) {
             SyncLogManager.getInstance().addLog('receive', 'FolderRename', e instanceof Error ? e.message : String(e), 'error', data.path);
         }
-        dump(`Error in receiveFolderSyncRename: ${normalizedOldPath} -> ${normalizedNewPath}`, e)
     } finally {
         // 实时更新同步时间戳，与 note 端保持一致
         // Update sync timestamp in real time, consistent with note side

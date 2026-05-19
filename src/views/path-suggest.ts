@@ -1,4 +1,5 @@
 import { App, AbstractInputSuggest, TFolder, setIcon } from "obsidian";
+import { dumpError } from "../lib/helps";
 
 
 export interface PathSuggestOptions {
@@ -69,7 +70,7 @@ export class PathSuggest extends AbstractInputSuggest<string> {
     try {
       await this.scanDirectory("", lowerQuery, suggestions);
     } catch (e) {
-      console.error("FNS: PathSuggest scan error", e);
+      dumpError("FNS: PathSuggest scan error", e);
     }
 
     return Array.from(suggestions)

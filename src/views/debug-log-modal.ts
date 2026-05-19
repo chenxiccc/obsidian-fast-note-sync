@@ -22,7 +22,8 @@ export class DebugLogModal extends Modal {
                 return;
             }
             logs.forEach(log => {
-                const item = container.createDiv({ cls: "fns-debug-log-item" });
+                const isError = log.includes("[ERROR]");
+                const item = container.createDiv({ cls: `fns-debug-log-item${isError ? " is-error" : ""}` });
                 item.setText(log);
             });
             // Scroll to bottom

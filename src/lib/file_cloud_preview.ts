@@ -1,7 +1,7 @@
 import { MarkdownPostProcessorContext, parseLinktext, loadPdfJs, MarkdownView, requestUrl, setIcon, Platform } from "obsidian";
 import { ViewPlugin, ViewUpdate, EditorView } from "@codemirror/view";
 
-import { hashContent, showSyncNotice } from "./helps";
+import { hashContent, showSyncNotice, dumpError } from "./helps";
 import type FastSync from "../main";
 
 
@@ -405,7 +405,7 @@ export class FileCloudPreview {
           await page.render(renderContext).promise;
         }
       } catch (e) {
-        console.error("PDF Render Error", e);
+        dumpError("PDF Render Error", e);
         const errorMsg = e instanceof Error ? e.message : String(e);
         showSyncNotice(`Error rendering PDF: ${errorMsg}`);
       } finally {
@@ -512,7 +512,7 @@ export class FileCloudPreview {
 
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
-        console.error("PDF Load Error", errorMsg);
+        dumpError("PDF Load Error", errorMsg);
         loadingText.setText(`Failed to load PDF: ${errorMsg}`);
       }
     })();

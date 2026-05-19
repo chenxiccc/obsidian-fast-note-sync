@@ -28,6 +28,18 @@ export const dump = function (...message: unknown[]): void {
   }
 }
 
+/**
+ * 打印错误日志
+ * Print error log
+ */
+export const dumpError = function (...message: unknown[]): void {
+  if (logLevel === "console") {
+    console.error(...message)
+  } else if (logLevel === "internal") {
+    DebugLogManager.getInstance().addLog("[ERROR]", ...message)
+  }
+}
+
 
 /**
  * 包装 fetch API 以通过 ESLint 检查

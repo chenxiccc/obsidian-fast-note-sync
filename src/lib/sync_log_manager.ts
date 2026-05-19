@@ -1,6 +1,7 @@
 import { moment } from "obsidian";
 
 import FastSync from "../main";
+import { dumpError } from "./helps";
 
 
 export type LogType = 'send' | 'receive' | 'info' | 'error';
@@ -256,7 +257,7 @@ export class SyncLogManager {
             try {
                 await this.plugin.app.vault.adapter.write(this.logFilePath, "");
             } catch (e) {
-                console.error("Failed to clear sync log file:", e);
+                dumpError("Failed to clear sync log file:", e);
             }
         }
     }
@@ -292,7 +293,7 @@ export class SyncLogManager {
             // 使用 Obsidian API 追加文件
             await this.plugin.app.vault.adapter.append(this.logFilePath, line);
         } catch (e) {
-            console.error("Failed to write sync log to file:", e);
+            dumpError("Failed to write sync log to file:", e);
         }
     }
 }

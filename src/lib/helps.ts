@@ -1,10 +1,11 @@
 import { Notice, normalizePath, TFolder, Platform, App, PluginManifest } from "obsidian";
+import { $ } from "../i18n/lang";
 
 import FastSync from "../main";
 import { SyncLogManager } from "./sync_log_manager";
-import { nativeFetch, vaultDelete, dump, setLogEnabled, logLevel } from "./helps_obsidian_bypass";
+import { nativeFetch, vaultDelete, dump, dumpError, setLogEnabled, logLevel } from "./helps_obsidian_bypass";
 
-export { nativeFetch, vaultDelete, dump, setLogEnabled, logLevel };
+export { nativeFetch, vaultDelete, dump, dumpError, setLogEnabled, logLevel };
 
 
 /**
@@ -894,10 +895,10 @@ export const checkAndNotifyCaseConflict = function (
     const matchedFile = files.find(f => f.path.toLowerCase() === lowerPath);
 
     if (matchedFile && matchedFile.path !== normalizedPath) {
-      const typeLabel = typeSync.startsWith('File') ? '附件' : typeSync.startsWith('Config') ? '配置' : typeSync.startsWith('Folder') ? '目录' : '笔记';
-      const noticeMsg = `⚠️ ${typeLabel}同步大小写冲突！\n服务端期望路径: ${normalizedPath}\n本地实际已存在: ${matchedFile.path}\n由于 Windows 不区分大小写，请手动修改名称保持一致。`;
+      const typeLabel = typeSync.startsWith('File') ? $('ui.log.category_attachment') : typeSync.startsWith('Config') ? $('ui.log.category_config') : typeSync.startsWith('Folder') ? $('ui.log.category_folder') : $('ui.log.category_note');
+      const noticeMsg = $('ui.status.case_conflict.title', { type: typeLabel, expectedPath: normalizedPath, actualPath: matchedFile.path });
       showSyncNotice(noticeMsg, 15000); // 提示持续 15 秒 / Duration of 15 seconds
-      SyncLogManager.getInstance().addLog('receive', typeSync, `大小写冲突！本地实际存在：${matchedFile.path}`, 'error', relativePath);
+      SyncLogManager.getInstance().addLog('receive', typeSync, $('ui.status.case_conflict.log', { actualPath: matchedFile.path }), 'error', relativePath);
       return true;
     }
   }

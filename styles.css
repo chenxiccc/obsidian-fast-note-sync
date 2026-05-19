@@ -3111,6 +3111,9 @@ body .suggestion-container {
   padding: 2px 0;
   border-bottom: 1px solid var(--background-modifier-border-faint);
 }
+.fns-debug-log-item.is-error {
+  color: var(--text-error, #ea5555);
+}
 .fns-debug-log-item:last-child {
   border-bottom: none;
 }

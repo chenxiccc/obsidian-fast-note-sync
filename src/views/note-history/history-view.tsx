@@ -6,7 +6,7 @@ import { HistoryDetail } from "./history-detail";
 import { LucideIcon } from "./lucide-icon";
 import type FastSync from "../../main";
 import { $ } from "../../i18n/lang";
-import { showSyncNotice } from "../../lib/helps";
+import { showSyncNotice, dumpError } from "../../lib/helps";
 import { ConfirmModal } from "../confirm-modal";
 
 
@@ -43,7 +43,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ plugin, filePath }) =>
             setTotalRows(data?.totalRows || 0);
             setPage(targetPage);
         } catch (e) {
-            console.error("loadHistory error:", e);
+            dumpError("loadHistory error:", e);
             const errorMessage = e instanceof Error ? e.message : $("ui.history.load_failed");
             setError(errorMessage);
         } finally {
@@ -58,7 +58,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ plugin, filePath }) =>
             const detail = await service.getNoteHistoryDetail(id);
             setSelectedHistory(detail);
         } catch (e) {
-            console.error(e);
+            dumpError(e);
         }
     };
 
@@ -73,7 +73,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ plugin, filePath }) =>
                         void loadHistory(page);
                     }
                 } catch (e) {
-                    console.error("handleRestore error:", e);
+                    dumpError("handleRestore error:", e);
                 } finally {
                     setLoading(false);
                 }
