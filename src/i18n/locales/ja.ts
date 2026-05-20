@@ -236,6 +236,7 @@ export default {
   "ui.status.starting": "同期を開始",
   "ui.status.new_version": "新しいバージョンが見つかりました: ${version}。クリックすると更新ページに移動します",
   "ui.status.completed": "同期完了",
+  "ui.status.failed": "同期に失敗しました",
   "ui.status.conflict": "同期の競合が検出されました。強制マージ済みです。${path} を手動で処理する必要があります。",
   "ui.status.no_connection": "サーバーに接続できません。ネットワーク接続を確認してください",
   "ui.status.config_imported": "認証設定をインポートしました",

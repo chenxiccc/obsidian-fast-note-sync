@@ -402,5 +402,6 @@
   "setting.debug.version_installing": "1ee1990ad1be7066c0f997732748438a",
   "setting.debug.version_installing_notice": "0932ef6aa3fe0f2e71f52d7a33d45579",
   "setting.debug.version_install_success": "85899f1bccb9a16a0339c61d49b01ff2",
-  "setting.debug.version_install_fail": "3b99df92e20ad0806b12e434bc8171c4"
+  "setting.debug.version_install_fail": "3b99df92e20ad0806b12e434bc8171c4",
+  "ui.status.failed": "d61036e7f52095ded8cb1debfb913e18"
 }

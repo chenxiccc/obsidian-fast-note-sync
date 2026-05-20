@@ -236,6 +236,7 @@ export default {
   "ui.status.starting": "开始同步",
   "ui.status.new_version": "发现新版本: ${version}, 点击后跳转更新页面",
   "ui.status.completed": "同步完成",
+  "ui.status.failed": "同步失败",
   "ui.status.conflict": "检测到同步冲突，已强制合并，需要手动处理 ${path}。",
   "ui.status.no_connection": "无法连接到服务器，请检查网络连接",
   "ui.status.config_imported": "已导入授权配置",

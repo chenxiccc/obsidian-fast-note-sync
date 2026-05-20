@@ -236,6 +236,7 @@ export default {
   "ui.status.starting": "開始同步",
   "ui.status.new_version": "發現新版本: ${version}, 點擊後跳轉更新頁面",
   "ui.status.completed": "同步完成",
+  "ui.status.failed": "同步失敗",
   "ui.status.conflict": "檢測到同步衝突，已強制合併，需要手動處理 ${path}。",
   "ui.status.no_connection": "無法連接到服務器，請檢查網絡連接",
   "ui.status.config_imported": "已導入授權配置",

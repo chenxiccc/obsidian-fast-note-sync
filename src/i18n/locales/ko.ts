@@ -236,6 +236,7 @@ export default {
   "ui.status.starting": "동기화 시작",
   "ui.status.new_version": "새 버전 발견: ${version}, 클릭하면 업데이트 페이지로 이동합니다",
   "ui.status.completed": "동기화 완료",
+  "ui.status.failed": "동기화 실패",
   "ui.status.conflict": "동기화 충돌이 감지되어 강제 병합되었습니다. ${path}를 수동으로 처리해야 합니다.",
   "ui.status.no_connection": "서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요",
   "ui.status.config_imported": "인증 구성이 가져와졌습니다",

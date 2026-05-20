@@ -236,6 +236,7 @@ export default {
   "ui.status.starting": "Starting sync",
   "ui.status.new_version": "New version found: ${version}, click to go to the update page",
   "ui.status.completed": "Sync completed",
+  "ui.status.failed": "Sync failed",
   "ui.status.conflict": "Sync conflict detected, forced merge applied. Manual handling required for ${path}.",
   "ui.status.no_connection": "Unable to connect to server, please check network connection",
   "ui.status.config_imported": "Authorization configuration imported",
